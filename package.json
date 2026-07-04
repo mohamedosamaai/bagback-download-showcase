@@ -1,0 +1,16 @@
+{
+  "name": "bagback-download",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bagback Download monorepo",
+  "scripts": {
+    "check": "echo \"Scaffold check passed\"",
+    "web:dev": "cd apps/web && npm run dev",
+    "web:build": "cd apps/web && npm run build"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "license": "Apache-2.0"
+}
