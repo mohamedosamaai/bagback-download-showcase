@@ -9,7 +9,7 @@
 
 - Owner platform: https://bagbacktech.com
 - Try our projects: https://elitk.com
-- For developers: https://library.elitk.com
+- For developers: https://ai.bagbacktech.com
 - Founder: https://mohamedosama.me
 - Search username: **@Mohamedosamaai**
 

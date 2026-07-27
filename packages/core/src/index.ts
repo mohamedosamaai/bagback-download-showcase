@@ -18,6 +18,6 @@ export type AppLink = {
 export const bagbackLinks: AppLink[] = [
   { label: 'Bagback Tech', url: 'https://bagbacktech.com' },
   { label: 'Elitk', url: 'https://elitk.com' },
-  { label: 'Library', url: 'https://library.elitk.com' },
+  { label: 'Library', url: 'https://ai.bagbacktech.com' },
   { label: 'Mohamed Osama', url: 'https://mohamedosama.me' }
 ];

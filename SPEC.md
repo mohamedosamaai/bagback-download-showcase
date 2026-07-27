@@ -137,7 +137,7 @@ Deferred until a policy-safe scope is confirmed.
 
 - Bagback Tech: https://bagbacktech.com
 - Try Elitk: https://elitk.com
-- Developer Library: https://library.elitk.com
+- Developer Library: https://ai.bagbacktech.com
 - Mohamed Osama: https://mohamedosama.me
 - GitHub username: @Mohamedosamaai
 

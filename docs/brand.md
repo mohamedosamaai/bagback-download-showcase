@@ -28,7 +28,7 @@ Built by Bagback Tech by developer Mohamed Osama.
 
 - Bagback Tech: https://bagbacktech.com
 - Elitk: https://elitk.com
-- Library: https://library.elitk.com
+- Library: https://ai.bagbacktech.com
 - Mohamed Osama: https://mohamedosama.me
 - Username: @Mohamedosamaai
 

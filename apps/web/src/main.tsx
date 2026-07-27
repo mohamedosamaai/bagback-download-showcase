@@ -50,7 +50,7 @@ function App() {
         <h2>روابط Bagback</h2>
         <a href="https://bagbacktech.com">Bagbacktech.com</a>
         <a href="https://elitk.com">Elitk.com</a>
-        <a href="https://library.elitk.com">Library.elitk.com</a>
+        <a href="https://ai.bagbacktech.com">ai.bagbacktech.com</a>
         <a href="https://mohamedosama.me">Mohamedosama.me</a>
         <span>@Mohamedosamaai</span>
       </section>
