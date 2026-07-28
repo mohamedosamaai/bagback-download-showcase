@@ -55,23 +55,23 @@ function updateJob(id: string, patch: Partial<Job>) {
   jobs.set(id, { ...job, ...patch, updatedAt: new Date().toISOString() });
 }
 
-async function fetchFreeProxy(): Promise<string | null> {
+async function fetchFreeProxies(): Promise<string[]> {
   return new Promise((resolve) => {
     const req = https.get(
-      'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=2500&country=all&ssl=all&anonymity=all',
+      'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=1500&country=all&ssl=all&anonymity=all',
       (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
           const proxies = data.split(/[\r\n]+/).filter((line) => line.includes(':'));
-          resolve(proxies[0] || null);
+          resolve(proxies.slice(0, 8));
         });
       }
     );
-    req.on('error', () => resolve(null));
+    req.on('error', () => resolve([]));
     req.setTimeout(3000, () => {
       req.destroy();
-      resolve(null);
+      resolve([]);
     });
   });
 }
@@ -180,12 +180,12 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     });
     return;
   } catch (err) {
-    console.warn('[Direct yt-dlp analyze failed, retrying with proxy]', err);
+    console.warn('[Direct yt-dlp analyze failed, retrying with proxy pool]', err);
   }
 
-  // 3. Retry with Proxy for blocked datacenter IPs
-  const proxy = await fetchFreeProxy();
-  if (proxy) {
+  // 3. Retry with Proxy pool for blocked datacenter IPs
+  const proxies = await fetchFreeProxies();
+  for (const proxy of proxies) {
     try {
       const raw = await ytdlp([
         '--proxy', `http://${proxy}`,
@@ -219,7 +219,7 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
       });
       return;
     } catch (proxyErr) {
-      console.error('[Proxy analyze failed]', proxyErr);
+      console.warn(`[Proxy analyze failed with ${proxy}]`, proxyErr);
     }
   }
 
@@ -331,13 +331,17 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
   // Step 1: Try direct download first
   let success = await executeYtDlp(buildArgs());
 
-  // Step 2: If direct download failed on YouTube, retry with dynamic proxy
+  // Step 2: If direct download failed on YouTube, iterate through proxy pool
   if (!success && isYouTubeUrl(url)) {
-    console.warn('[Direct download failed, fetching free proxy for YouTube download retry]');
-    const proxy = await fetchFreeProxy();
-    if (proxy) {
+    console.warn('[Direct download failed, fetching free proxy pool for YouTube download retry]');
+    const proxies = await fetchFreeProxies();
+    for (const proxy of proxies) {
       console.log(`[Retrying download with proxy ${proxy}]`);
       success = await executeYtDlp(buildArgs(proxy));
+      if (success) {
+        console.log(`[Download succeeded using proxy ${proxy}]`);
+        break;
+      }
     }
   }
 
