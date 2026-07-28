@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  bagback-download:
+    image: bagback-download:latest
+    container_name: bagback-download
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DOWNLOAD_DIR: /downloads
+      STATIC_DIR: /app/static
+      CORS_ORIGIN: "https://download.bagbacktech.com"
+    volumes:
+      - bagback-downloads:/downloads
+    networks:
+      - bagback-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  bagback-downloads:
+    driver: local
+
+networks:
+  bagback-net:
+    external: true
+    name: bagback-stack_default

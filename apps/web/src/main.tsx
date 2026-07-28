@@ -2,6 +2,127 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
+// ─── Translations Dictionary ───────────────────────────────────────────────
+
+type Lang = 'ar' | 'en';
+
+const dict = {
+  ar: {
+    appName: 'Bagback Download',
+    tagline: 'مدير التحميل المفتوح والمجاني لمحتوى الويب والفيديو والصوت',
+    subtagline: 'صنع بحب للمستخدمين بدون أرباح، من شركة Bagback Digital Solutions بيد المطور محمد أسامة.',
+    inputPlaceholder: 'الصق رابط الفيديو أو الصوت هنا...',
+    analyze: 'تحليل',
+    analyzing: 'جارٍ التحليل...',
+    pasteClipboard: '📋 لصق من الحافظة',
+    supportedSites: 'يوتيوب · تيك توك · إنستغرام · تويتر · فيسبوك · وآلاف المواقع الأخرى',
+    videoTab: '🎬 فيديو',
+    audioTab: '🎵 صوت فقط (MP3)',
+    selectQuality: 'اختر الجودة',
+    bestQuality: 'أفضل جودة',
+    startDownload: 'ابدأ التحميل',
+    addingDownload: 'جارٍ الإضافة...',
+    downloading: 'جارٍ التحميل',
+    history: 'سجل التحميلات',
+    clearAll: 'مسح الكل',
+    emptyQueue: 'الصق رابطاً وابدأ التحميل',
+    statusQueued: 'في الانتظار',
+    statusRunning: 'جارٍ التحميل',
+    statusCompleted: 'اكتمل التحميل',
+    statusFailed: 'فشل التحميل',
+    openFile: 'تحميل الملف',
+    deleteItem: 'حذف',
+    legalNotice: 'استخدم التطبيق فقط مع المحتوى المسموح لك بحفظه طبقاً للقوانين.',
+    
+    // Nav & Footer
+    termsBtn: 'شروط الاستخدام',
+    privacyBtn: 'سياسة الخصوصية',
+    cleanRoomBtn: 'عن المشروع',
+    bagbackTech: 'BagbackTech',
+    portfolio: 'محمد أسامة',
+    github: 'GitHub',
+    
+    // Modals
+    termsTitle: 'شروط الاستخدام والخدمة',
+    termsBody: `Bagback Download هو تطبيق وإطارية عمل مفتوحة المصدر (Apache 2.0) مخصصة لإدارة وتحميل الوسائط الرقمية والملفات التي يمتلك المستخدم الحق القانوني في حفظها أو الوصول إليها.
+- يقر المستخدم بمسؤوليته الكاملة عن أي محتوى يقوم بتحميله أو معالجته عبر التطبيق.
+- يُحظر استخدام الخدمة في أي أنشطة تنتهك حقوق الملكية الفكرية أو القوانين المحلية والدولية.
+- يتم تقديم البرمجية كما هي (As-Is) دون أي ضمانات صريحة أو ضمنية.`,
+    
+    privacyTitle: 'سياسة الخصوصية وأمان البيانات',
+    privacyBody: `تولي Bagback Digital Solutions أهمية قصوى لخصوصية وسريّة بيانات المستخدمين:
+- لا يتم حفظ أي سجلات تتبع (No Tracking) أو تقنيات ملفات تعريف ارتباط (Cookies) خارجية.
+- جميع عمليات التحميل تتم مباشرة دون مشاركة بياناتك الشخصية مع أي طرف ثالث.
+- يتم حذف الملفات المؤقتة من السيرفر فور اكتمال عملية التحميل أو حسب إعدادات التنفيذ.`,
+
+    cleanRoomTitle: 'بيان المشروع والتطوير المستقل (Clean-Room Policy)',
+    cleanRoomBody: `تم بناء Bagback Download بالكامل من الصفر بواسطة المهندس محمد أسامة وشركة Bagback Digital Solutions كمنتج أصلي مفتوح المصدر:
+- التزام تام بسياسة Clean-Room Development دون نسخ أي كود أو واجهات من تطبيقات أخرى.
+- ترخيص البرمجية: Apache License 2.0 متاح للعامة على ريبوزيتوري GitHub.
+- رؤية المنتجات: جزء من منظومة Bagback التقنية للحلول الرقمية المتطورة.`,
+
+    closeModal: 'إغلاق',
+  },
+  en: {
+    appName: 'Bagback Download',
+    tagline: 'Free, Open-Source Universal Media & File Download Manager',
+    subtagline: 'Built with love for users without profit, by Bagback Digital Solutions & lead developer Mohamed Osama.',
+    inputPlaceholder: 'Paste video or media link here...',
+    analyze: 'Analyze',
+    analyzing: 'Analyzing...',
+    pasteClipboard: '📋 Paste from Clipboard',
+    supportedSites: 'YouTube · TikTok · Instagram · Twitter · Facebook · & Thousands More',
+    videoTab: '🎬 Video',
+    audioTab: '🎵 Audio Only (MP3)',
+    selectQuality: 'Select Quality',
+    bestQuality: 'Best Quality',
+    startDownload: 'Start Download',
+    addingDownload: 'Adding...',
+    downloading: 'Downloading',
+    history: 'Download History',
+    clearAll: 'Clear All',
+    emptyQueue: 'Paste a link above to start downloading',
+    statusQueued: 'Queued',
+    statusRunning: 'Downloading',
+    statusCompleted: 'Completed',
+    statusFailed: 'Failed',
+    openFile: 'Download File',
+    deleteItem: 'Delete',
+    legalNotice: 'Use this app only with media you have permission to download.',
+    
+    // Nav & Footer
+    termsBtn: 'Terms of Service',
+    privacyBtn: 'Privacy Policy',
+    cleanRoomBtn: 'About Project',
+    bagbackTech: 'BagbackTech',
+    portfolio: 'Mohamed Osama',
+    github: 'GitHub',
+    
+    // Modals
+    termsTitle: 'Terms of Service & Usage',
+    termsBody: `Bagback Download is an open-source utility (Apache 2.0) built for managing and downloading digital media and files that users have explicit legal rights to access.
+- Users assume full responsibility for all content processed through the application.
+- Infringing upon intellectual property or copyright laws is strictly prohibited.
+- Software is provided "As-Is" without warranties of any kind.`,
+    
+    privacyTitle: 'Privacy Policy & Data Security',
+    privacyBody: `Bagback Digital Solutions strictly prioritizes user privacy and security:
+- Zero user tracking, zero third-party telemetry, zero commercial trackers.
+- Downloads are processed directly without storing personal information.
+- Temporary download files are automatically purged from server buffers upon completion.`,
+
+    cleanRoomTitle: 'Clean-Room Engineering Statement',
+    cleanRoomBody: `Bagback Download was engineered completely from scratch by Mohamed Osama and Bagback Digital Solutions as an original open-source product:
+- Strict compliance with Clean-Room Development standards — zero copied source code or UI assets.
+- License: Apache License 2.0 publicly available on GitHub.
+- Ecosystem: Proud component of the Bagback Digital Solutions technology suit.`,
+
+    closeModal: 'Close',
+  }
+} as const;
+
+type DictKeys = keyof typeof dict['ar'];
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface Job {
@@ -22,7 +143,6 @@ interface Format {
   resolution?: string;
   fps?: number;
   filesize?: number;
-  format_note?: string;
   vcodec?: string;
   acodec?: string;
 }
@@ -34,8 +154,6 @@ interface AnalyzeResult {
   uploader?: string;
   formats: Format[];
 }
-
-// ─── Constants ─────────────────────────────────────────────────────────────
 
 const API = '/api';
 const POLL_INTERVAL = 2000;
@@ -56,7 +174,7 @@ function formatDuration(seconds?: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function truncateUrl(url: string, max = 50): string {
+function truncateUrl(url: string, max = 45): string {
   try {
     const u = new URL(url);
     const display = u.hostname + u.pathname;
@@ -66,18 +184,9 @@ function truncateUrl(url: string, max = 50): string {
   }
 }
 
-const STATUS_LABELS: Record<Job['status'], string> = {
-  queued: 'في الانتظار',
-  running: 'جارٍ التحميل',
-  completed: 'اكتمل',
-  failed: 'فشل',
-};
-
-// ─── Components ─────────────────────────────────────────────────────────────
-
-// Icon components
+// SVG Icons
 const DownloadIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
@@ -93,7 +202,7 @@ const TrashIcon = () => (
 );
 
 const SearchIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
@@ -105,10 +214,34 @@ const CheckIcon = () => (
   </svg>
 );
 
-// ── JobCard ─────────────────────────────────────────────────────────────────
-function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }) {
+const GlobeIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
+// ─── Components ─────────────────────────────────────────────────────────────
+
+function JobCard({
+  job,
+  onDelete,
+  t,
+}: {
+  job: Job;
+  onDelete: (id: string) => void;
+  t: (key: DictKeys) => string;
+}) {
   const handleDownload = () => {
     window.open(`${API}/jobs/${job.id}/file`, '_blank');
+  };
+
+  const getStatusLabel = (status: Job['status']) => {
+    if (status === 'queued') return t('statusQueued');
+    if (status === 'running') return t('statusRunning');
+    if (status === 'completed') return t('statusCompleted');
+    return t('statusFailed');
   };
 
   return (
@@ -126,7 +259,7 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
             <button
               className="icon-btn download-btn"
               onClick={handleDownload}
-              title="تحميل الملف"
+              title={t('openFile')}
             >
               <DownloadIcon />
             </button>
@@ -134,7 +267,7 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
           <button
             className="icon-btn delete-btn"
             onClick={() => onDelete(job.id)}
-            title="حذف"
+            title={t('deleteItem')}
           >
             <TrashIcon />
           </button>
@@ -143,21 +276,18 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
 
       <div className="progress-wrap">
         <div className="progress-bar-bg">
-          <div
-            className="progress-bar-fill"
-            style={{ width: `${job.progress}%` }}
-          />
+          <div className="progress-bar-fill" style={{ width: `${job.progress}%` }} />
         </div>
         <div className="progress-meta">
           <span className={`status-text ${job.status}`}>
-            {STATUS_LABELS[job.status]}
+            {getStatusLabel(job.status)}
             {job.status === 'running' && ` — ${job.progress.toFixed(0)}%`}
           </span>
           <span className="file-size">
             {job.status === 'completed' && job.fileSize
               ? formatSize(job.fileSize)
               : job.error
-              ? job.error.slice(0, 60)
+              ? job.error.slice(0, 50)
               : ''}
           </span>
         </div>
@@ -166,26 +296,25 @@ function JobCard({ job, onDelete }: { job: Job; onDelete: (id: string) => void }
   );
 }
 
-// ── AnalyzeResultCard ────────────────────────────────────────────────────────
 function AnalyzeResultCard({
   result,
   url,
   onDownload,
+  t,
 }: {
   result: AnalyzeResult;
   url: string;
   onDownload: (opts: { url: string; format: string; audioOnly: boolean }) => void;
+  t: (key: DictKeys) => string;
 }) {
   const [audioOnly, setAudioOnly] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState('bestvideo+bestaudio/best');
   const [loading, setLoading] = useState(false);
 
-  // Filter to unique resolutions
   const videoFormats = result.formats
     .filter((f) => f.vcodec && f.vcodec !== 'none' && f.resolution)
     .reduce((acc: Format[], f) => {
-      const key = f.resolution!;
-      if (!acc.find((x) => x.resolution === key)) acc.push(f);
+      if (!acc.find((x) => x.resolution === f.resolution)) acc.push(f);
       return acc;
     }, [])
     .slice(0, 6);
@@ -220,26 +349,24 @@ function AnalyzeResultCard({
         </div>
       </div>
 
-      {/* Audio/Video toggle */}
       <div className="options-row" style={{ marginBottom: '16px' }}>
         <button
           className={`option-chip ${!audioOnly ? 'selected' : ''}`}
           onClick={() => setAudioOnly(false)}
         >
-          🎬 فيديو
+          {t('videoTab')}
         </button>
         <button
           className={`option-chip ${audioOnly ? 'selected' : ''}`}
           onClick={() => setAudioOnly(true)}
         >
-          🎵 صوت فقط (MP3)
+          {t('audioTab')}
         </button>
       </div>
 
-      {/* Format selection */}
       {!audioOnly && videoFormats.length > 0 && (
         <div className="formats-section">
-          <div className="formats-label">اختر الجودة</div>
+          <div className="formats-label">{t('selectQuality')}</div>
           <div className="formats-grid">
             {videoFormats.map((f) => (
               <button
@@ -255,36 +382,82 @@ function AnalyzeResultCard({
               className={`format-option ${selectedFormat === 'bestvideo+bestaudio/best' ? 'selected' : ''}`}
               onClick={() => setSelectedFormat('bestvideo+bestaudio/best')}
             >
-              <span className="format-res">أفضل</span>
-              <span className="format-ext">auto</span>
+              <span className="format-res">{t('bestQuality')}</span>
+              <span className="format-ext">Auto</span>
             </button>
           </div>
         </div>
       )}
 
       <div className="download-actions">
-        <button
-          className="btn btn-primary"
-          onClick={handleStart}
-          disabled={loading}
-        >
-          {loading ? <><span className="spinner" /> جارٍ الإضافة...</> : <><DownloadIcon /> ابدأ التحميل</>}
+        <button className="btn btn-primary" onClick={handleStart} disabled={loading}>
+          {loading ? (
+            <><span className="spinner" /> {t('addingDownload')}</>
+          ) : (
+            <><DownloadIcon /> {t('startDownload')}</>
+          )}
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Main App ──────────────────────────────────────────────────────────────
+// Modal component
+function InfoModal({
+  title,
+  body,
+  onClose,
+  t,
+}: {
+  title: string;
+  body: string;
+  onClose: () => void;
+  t: (key: DictKeys) => string;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="icon-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {body.split('\n').map((paragraph, i) => (
+            <p key={i}>{paragraph}</p>
+          ))}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>{t('closeModal')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Application ──────────────────────────────────────────────────────
+
 function App() {
+  const [lang, setLang] = useState<Lang>('ar');
   const [url, setUrl] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
   const [analyzeError, setAnalyzeError] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'cleanRoom' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Poll jobs
+  // Translation helper function t(key)
+  const t = useCallback((key: DictKeys): string => {
+    return dict[lang][key] || dict.ar[key] || '';
+  }, [lang]);
+
+  // Update HTML document attributes when language changes
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }, [lang]);
+
+  // Poll jobs from API
   useEffect(() => {
     const poll = async () => {
       try {
@@ -294,12 +467,12 @@ function App() {
           setJobs(data);
         }
       } catch {
-        // server might be starting
+        // Backend starting
       }
     };
     poll();
-    const id = setInterval(poll, POLL_INTERVAL);
-    return () => clearInterval(id);
+    const timer = setInterval(poll, POLL_INTERVAL);
+    return () => clearInterval(timer);
   }, []);
 
   const handleAnalyze = useCallback(async () => {
@@ -318,10 +491,10 @@ function App() {
         body: JSON.stringify({ url: trimmed }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'فشل التحليل');
+      if (!res.ok) throw new Error(data.error || 'Failed to analyze URL');
       setAnalyzeResult(data);
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع');
+      setAnalyzeError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setAnalyzing(false);
     }
@@ -334,11 +507,11 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(opts),
       });
-      if (!res.ok) throw new Error('فشل بدء التحميل');
+      if (!res.ok) throw new Error('Failed to start download');
       setAnalyzeResult(null);
       setUrl('');
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : 'فشل بدء التحميل');
+      setAnalyzeError(err instanceof Error ? err.message : 'Failed to start download');
     }
   }, []);
 
@@ -360,7 +533,7 @@ function App() {
         setAnalyzeError('');
       }
     } catch {
-      // clipboard permission not granted
+      // Permission denied
     }
   };
 
@@ -379,40 +552,42 @@ function App() {
             </div>
           </a>
           <nav className="header-nav">
+            <button
+              className="nav-btn lang-btn"
+              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+            >
+              <GlobeIcon /> {lang === 'ar' ? 'English' : 'عربي'}
+            </button>
             <a href="https://bagbacktech.com" target="_blank" rel="noreferrer">
-              <button className="nav-btn">Bagbacktech.com</button>
+              <button className="nav-btn">{t('bagbackTech')}</button>
             </a>
             <a href="https://github.com/mohamedosamaai/bagback-download" target="_blank" rel="noreferrer">
-              <button className="nav-btn">GitHub</button>
+              <button className="nav-btn">{t('github')}</button>
             </a>
           </nav>
         </div>
       </header>
 
-      {/* Main */}
+      {/* Main Container */}
       <main className="main">
         <div className="container">
-          {/* Hero */}
+          {/* Hero Section */}
           <div className="hero">
             <div className="hero-eyebrow">
-              <CheckIcon />
-              مفتوح المصدر · مجاني · بدون إعلانات
+              <CheckIcon /> {t('tagline')}
             </div>
-            <h1>مدير التحميل الذكي</h1>
-            <p className="hero-desc">
-              حمّل مقاطع الفيديو والصوت من آلاف المصادر بجودة عالية.
-              مبني بحب من Bagback Digital Solutions، بيد المطور محمد أسامة.
-            </p>
+            <h1>{t('appName')}</h1>
+            <p className="hero-desc">{t('subtagline')}</p>
           </div>
 
-          {/* Input card */}
+          {/* Input Card */}
           <div className="input-card">
             <div className="url-input-wrap">
               <input
                 ref={inputRef}
                 type="url"
                 className="url-input"
-                placeholder="الصق رابط الفيديو أو الصوت هنا..."
+                placeholder={t('inputPlaceholder')}
                 value={url}
                 onChange={(e) => {
                   setUrl(e.target.value);
@@ -430,51 +605,51 @@ function App() {
                 disabled={analyzing || !url.trim()}
               >
                 {analyzing ? (
-                  <><span className="spinner" /> جارٍ التحليل...</>
+                  <><span className="spinner" /> {t('analyzing')}</>
                 ) : (
-                  <><SearchIcon /> تحليل</>
+                  <><SearchIcon /> {t('analyze')}</>
                 )}
               </button>
             </div>
+
             <div className="options-row">
               <button className="option-chip" onClick={handlePaste}>
-                📋 لصق من الحافظة
+                {t('pasteClipboard')}
               </button>
-              <button className="option-chip" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                يوتيوب · تيك توك · إنستغرام · تويتر · وأكثر
-              </button>
+              <span className="supported-hint">{t('supportedSites')}</span>
             </div>
           </div>
 
-          {/* Error */}
+          {/* Error Message */}
           {analyzeError && (
             <div className="error-msg">
               ⚠️ {analyzeError}
             </div>
           )}
 
-          {/* Analyze result */}
+          {/* Analyze Result Card */}
           {analyzeResult && (
             <AnalyzeResultCard
               result={analyzeResult}
               url={url}
               onDownload={handleDownload}
+              t={t}
             />
           )}
 
-          {/* Queue */}
+          {/* Download Queue / History */}
           {(activeJobs.length > 0 || doneJobs.length > 0) && (
             <div className="queue-section">
               {activeJobs.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
                   <div className="section-header">
                     <div className="section-title">
-                      جارٍ التحميل
+                      {t('downloading')}
                       <span className="badge">{activeJobs.length}</span>
                     </div>
                   </div>
                   {activeJobs.map((job) => (
-                    <JobCard key={job.id} job={job} onDelete={handleDelete} />
+                    <JobCard key={job.id} job={job} onDelete={handleDelete} t={t} />
                   ))}
                 </div>
               )}
@@ -483,7 +658,7 @@ function App() {
                 <div>
                   <div className="section-header">
                     <div className="section-title">
-                      السجل
+                      {t('history')}
                       <span className="badge">{doneJobs.length}</span>
                     </div>
                     <button
@@ -491,22 +666,22 @@ function App() {
                       style={{ fontSize: '12px', padding: '5px 12px' }}
                       onClick={() => Promise.all(doneJobs.map((j) => handleDelete(j.id)))}
                     >
-                      مسح الكل
+                      {t('clearAll')}
                     </button>
                   </div>
                   {doneJobs.map((job) => (
-                    <JobCard key={job.id} job={job} onDelete={handleDelete} />
+                    <JobCard key={job.id} job={job} onDelete={handleDelete} t={t} />
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Empty state */}
+          {/* Empty State */}
           {jobs.length === 0 && !analyzeResult && (
             <div className="empty-state">
               <div className="empty-icon">⬇️</div>
-              <p>الصق رابطاً وابدأ التحميل</p>
+              <p>{t('emptyQueue')}</p>
             </div>
           )}
         </div>
@@ -516,25 +691,59 @@ function App() {
       <footer className="footer">
         <div className="footer-inner">
           <div className="footer-brand">
-            مبني بحب من{' '}
             <a href="https://bagbacktech.com" target="_blank" rel="noreferrer">
               Bagback Digital Solutions
             </a>{' '}
-            · مفتوح المصدر تحت رخصة Apache 2.0
+            · Apache 2.0 License
           </div>
+
           <div className="footer-links">
-            <a href="https://bagbacktech.com" target="_blank" rel="noreferrer">BagbackTech</a>
-            <a href="https://elitk.com" target="_blank" rel="noreferrer">Elitk</a>
-            <a href="https://mohamedosama.me" target="_blank" rel="noreferrer">Mohamed Osama</a>
-            <a href="https://github.com/mohamedosamaai/bagback-download" target="_blank" rel="noreferrer">GitHub</a>
+            <button className="footer-link-btn" onClick={() => setActiveModal('terms')}>
+              {t('termsBtn')}
+            </button>
+            <button className="footer-link-btn" onClick={() => setActiveModal('privacy')}>
+              {t('privacyBtn')}
+            </button>
+            <button className="footer-link-btn" onClick={() => setActiveModal('cleanRoom')}>
+              {t('cleanRoomBtn')}
+            </button>
+            <a href="https://mohamedosama.me" target="_blank" rel="noreferrer">
+              {t('portfolio')}
+            </a>
           </div>
         </div>
       </footer>
+
+      {/* Info Modals */}
+      {activeModal === 'terms' && (
+        <InfoModal
+          title={t('termsTitle')}
+          body={t('termsBody')}
+          onClose={() => setActiveModal(null)}
+          t={t}
+        />
+      )}
+      {activeModal === 'privacy' && (
+        <InfoModal
+          title={t('privacyTitle')}
+          body={t('privacyBody')}
+          onClose={() => setActiveModal(null)}
+          t={t}
+        />
+      )}
+      {activeModal === 'cleanRoom' && (
+        <InfoModal
+          title={t('cleanRoomTitle')}
+          body={t('cleanRoomBody')}
+          onClose={() => setActiveModal(null)}
+          t={t}
+        />
+      )}
     </div>
   );
 }
 
-// Mount
+// Mount React Root
 createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <App />
