@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import https from 'https';
+import http from 'http';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -55,16 +56,52 @@ function updateJob(id: string, patch: Partial<Job>) {
   jobs.set(id, { ...job, ...patch, updatedAt: new Date().toISOString() });
 }
 
-async function fetchFreeProxies(): Promise<string[]> {
+function checkProxy(proxyStr: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const parts = proxyStr.split(':');
+    if (parts.length !== 2) return resolve(null);
+    const host = parts[0];
+    const port = parseInt(parts[1], 10);
+
+    const req = http.request({
+      host,
+      port,
+      method: 'CONNECT',
+      path: 'www.google.com:443',
+      timeout: 1200,
+    });
+
+    req.on('connect', (_res, socket) => {
+      socket.destroy();
+      resolve(proxyStr);
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
+}
+
+async function fetchVerifiedProxies(): Promise<string[]> {
   return new Promise((resolve) => {
     const req = https.get(
       'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=1500&country=all&ssl=all&anonymity=all',
       (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
-        res.on('end', () => {
-          const proxies = data.split(/[\r\n]+/).filter((line) => line.includes(':'));
-          resolve(proxies.slice(0, 8));
+        res.on('end', async () => {
+          const list = data
+            .split(/[\r\n]+/)
+            .map((s) => s.trim())
+            .filter((line) => line.includes(':'))
+            .slice(0, 40);
+
+          const checks = list.map(checkProxy);
+          const results = await Promise.all(checks);
+          const working = results.filter((p): p is string => Boolean(p));
+          resolve(working);
         });
       }
     );
@@ -146,7 +183,7 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     }
   }
 
-  // 2. All other URLs or fallback: Try yt-dlp directly
+  // 2. Try yt-dlp directly
   try {
     const raw = await ytdlp([
       '--dump-json',
@@ -180,12 +217,12 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     });
     return;
   } catch (err) {
-    console.warn('[Direct yt-dlp analyze failed, retrying with proxy pool]', err);
+    console.warn('[Direct yt-dlp analyze failed, retrying with verified proxy]', err);
   }
 
-  // 3. Retry with Proxy pool for blocked datacenter IPs
-  const proxies = await fetchFreeProxies();
-  for (const proxy of proxies) {
+  // 3. Retry with verified working proxy pool
+  const verifiedProxies = await fetchVerifiedProxies();
+  for (const proxy of verifiedProxies) {
     try {
       const raw = await ytdlp([
         '--proxy', `http://${proxy}`,
@@ -331,15 +368,16 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
   // Step 1: Try direct download first
   let success = await executeYtDlp(buildArgs());
 
-  // Step 2: If direct download failed on YouTube, iterate through proxy pool
+  // Step 2: If direct download failed on YouTube, query verified working proxy pool
   if (!success && isYouTubeUrl(url)) {
-    console.warn('[Direct download failed, fetching free proxy pool for YouTube download retry]');
-    const proxies = await fetchFreeProxies();
-    for (const proxy of proxies) {
-      console.log(`[Retrying download with proxy ${proxy}]`);
+    console.warn('[Direct download failed, fetching verified proxy pool for YouTube download retry]');
+    const verifiedProxies = await fetchVerifiedProxies();
+    console.log(`[Found ${verifiedProxies.length} verified CONNECT proxies]`);
+    for (const proxy of verifiedProxies) {
+      console.log(`[Retrying download with verified proxy ${proxy}]`);
       success = await executeYtDlp(buildArgs(proxy));
       if (success) {
-        console.log(`[Download succeeded using proxy ${proxy}]`);
+        console.log(`[Download succeeded using verified proxy ${proxy}]`);
         break;
       }
     }
