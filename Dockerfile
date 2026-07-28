@@ -5,13 +5,10 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /build
 
-# Copy web app
 COPY apps/web/package.json ./apps/web/
 RUN cd apps/web && npm install
 
 COPY apps/web/ ./apps/web/
-
-# Build
 RUN cd apps/web && npm run build
 
 # ═══════════════════════════════════════════════════
@@ -32,33 +29,31 @@ RUN npm run build
 # ═══════════════════════════════════════════════════
 FROM python:3.12-slim
 
-# Install system dependencies
+# Install system dependencies + Deno JS runtime for yt-dlp EJS
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    unzip \
     ffmpeg \
     nodejs \
     npm \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && cp /root/.deno/bin/deno /usr/local/bin/deno \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp (latest stable)
-RUN pip install --no-cache-dir yt-dlp
+# Install yt-dlp + curl_cffi for browser impersonation
+RUN pip install --no-cache-dir --upgrade yt-dlp curl_cffi
 
 # Verify installations
-RUN yt-dlp --version && ffmpeg -version | head -1
+RUN yt-dlp --version && deno --version && ffmpeg -version | head -1
 
-# Create app user
 RUN useradd -m -u 1001 bagback
 
 WORKDIR /app
 
-# Copy built backend
 COPY --from=backend-builder /build/dist ./dist
 COPY --from=backend-builder /build/node_modules ./node_modules
-
-# Copy built frontend as static files the server will serve
 COPY --from=frontend-builder /build/apps/web/dist ./static
 
-# Create downloads directory
 RUN mkdir -p /downloads && chown bagback:bagback /downloads
 RUN chown -R bagback:bagback /app
 
@@ -75,4 +70,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:4000/api/health || exit 1
 
 CMD ["node", "dist/index.js"]
-

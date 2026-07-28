@@ -5,18 +5,17 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import ytdl from '@distube/ytdl-core';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(os.tmpdir(), 'bagback-downloads');
 const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, '..', 'static');
 
-// Ensure download directory exists
 if (!fs.existsSync(DOWNLOAD_DIR)) {
   fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
 }
 
-// In-memory job store (production would use Redis/DB)
 interface Job {
   id: string;
   url: string;
@@ -24,12 +23,10 @@ interface Job {
   progress: number;
   title?: string;
   format?: string;
-  quality?: string;
   filePath?: string;
   fileName?: string;
   fileSize?: number;
   error?: string;
-  formats?: FormatInfo[];
   createdAt: string;
   updatedAt: string;
 }
@@ -42,7 +39,6 @@ interface FormatInfo {
   filesize?: number;
   vcodec?: string;
   acodec?: string;
-  format_note?: string;
 }
 
 const jobs = new Map<string, Job>();
@@ -53,14 +49,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Helper: update job and timestamp
 function updateJob(id: string, patch: Partial<Job>) {
   const job = jobs.get(id);
   if (!job) return;
   jobs.set(id, { ...job, ...patch, updatedAt: new Date().toISOString() });
 }
 
-// Helper: run yt-dlp and return stdout
 function ytdlp(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn('yt-dlp', args, { env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' } });
@@ -75,25 +69,21 @@ function ytdlp(args: string[]): Promise<string> {
   });
 }
 
+function isYouTubeUrl(url: string): boolean {
+  return /youtube\.com|youtu\.be/i.test(url);
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────
 
-/**
- * GET /api/health
- * Health check — returns server status and yt-dlp version
- */
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const version = await ytdlp(['--version']);
-    res.json({ status: 'ok', ytdlp: version });
+    res.json({ status: 'ok', ytdlp: version, ytdlCore: true });
   } catch {
-    res.json({ status: 'ok', ytdlp: 'not installed' });
+    res.json({ status: 'ok', ytdlp: 'fallback', ytdlCore: true });
   }
 });
 
-/**
- * POST /api/analyze
- * Analyze a URL — returns title, thumbnail, and available formats
- */
 app.post('/api/analyze', async (req: Request, res: Response) => {
   const { url } = req.body as { url?: string };
   if (!url || !/^https?:\/\//i.test(url)) {
@@ -101,16 +91,46 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     return;
   }
 
+  // 1. Try @distube/ytdl-core for YouTube links first
+  if (isYouTubeUrl(url)) {
+    try {
+      const info = await ytdl.getInfo(url);
+      const formats: FormatInfo[] = info.formats
+        .filter((f) => f.container && (f.hasVideo || f.hasAudio))
+        .map((f) => ({
+          id: f.itag.toString(),
+          ext: f.container || 'mp4',
+          resolution: f.qualityLabel || (f.height ? `${f.height}p` : undefined),
+          filesize: f.contentLength ? parseInt(f.contentLength, 10) : undefined,
+          vcodec: f.hasVideo ? 'h264' : undefined,
+          acodec: f.hasAudio ? 'aac' : undefined,
+        }))
+        .slice(0, 15);
+
+      res.json({
+        title: info.videoDetails.title,
+        thumbnail: info.videoDetails.thumbnails?.[0]?.url,
+        duration: parseInt(info.videoDetails.lengthSeconds, 10),
+        uploader: info.videoDetails.author?.name,
+        formats,
+      });
+      return;
+    } catch (err) {
+      console.warn('[ytdl-core failed, falling back to yt-dlp]', err);
+    }
+  }
+
+  // 2. Fallback to yt-dlp for all other sites or if ytdl-core fails
   try {
     const raw = await ytdlp([
       '--dump-json',
       '--no-playlist',
       '--flat-playlist',
+      '--extractor-args', 'youtube:player_client=mweb,web',
       url,
     ]);
     const info = JSON.parse(raw);
 
-    // Extract best formats
     const formats: FormatInfo[] = (info.formats || [])
       .filter((f: any) => f.ext && (f.vcodec !== 'none' || f.acodec !== 'none'))
       .map((f: any) => ({
@@ -121,7 +141,6 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
         filesize: f.filesize,
         vcodec: f.vcodec,
         acodec: f.acodec,
-        format_note: f.format_note,
       }))
       .slice(0, 20);
 
@@ -138,10 +157,6 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/download
- * Start a download job — returns job ID immediately
- */
 app.post('/api/download', (req: Request, res: Response) => {
   const { url, format = 'bestvideo+bestaudio/best', audioOnly = false } = req.body as {
     url?: string;
@@ -167,15 +182,63 @@ app.post('/api/download', (req: Request, res: Response) => {
   };
   jobs.set(id, job);
 
-  // Start download in background
   runDownload(id, url, format, audioOnly).catch(console.error);
 
   res.json({ id });
 });
 
 async function runDownload(id: string, url: string, format: string, audioOnly: boolean) {
-  updateJob(id, { status: 'running', progress: 0 });
+  updateJob(id, { status: 'running', progress: 5 });
 
+  // Try ytdl-core for YouTube downloads
+  if (isYouTubeUrl(url)) {
+    try {
+      const info = await ytdl.getInfo(url);
+      const title = info.videoDetails.title.replace(/[/\\?%*:|"<>]/g, '_').slice(0, 80);
+      const ext = audioOnly ? 'mp3' : 'mp4';
+      const fileName = `${id}-${title}.${ext}`;
+      const filePath = path.join(DOWNLOAD_DIR, fileName);
+
+      updateJob(id, { title: info.videoDetails.title, progress: 20 });
+
+      const stream = ytdl(url, {
+        filter: audioOnly ? 'audioonly' : 'videoandaudio',
+        quality: audioOnly ? 'highestaudio' : 'highest',
+      });
+
+      const writeStream = fs.createWriteStream(filePath);
+      let downloaded = 0;
+      const total = parseInt(info.videoDetails.lengthSeconds, 10) * 100000; // estimated
+
+      stream.on('data', (chunk: Buffer) => {
+        downloaded += chunk.length;
+        const progress = Math.min(95, 20 + Math.round((downloaded / (total || 10000000)) * 75));
+        updateJob(id, { progress });
+      });
+
+      stream.pipe(writeStream);
+
+      await new Promise((resolve, reject) => {
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+        stream.on('error', reject);
+      });
+
+      const stat = fs.statSync(filePath);
+      updateJob(id, {
+        status: 'completed',
+        progress: 100,
+        filePath,
+        fileName: `${title}.${ext}`,
+        fileSize: stat.size,
+      });
+      return;
+    } catch (err) {
+      console.warn('[ytdl-core download failed, trying yt-dlp]', err);
+    }
+  }
+
+  // Fallback to yt-dlp
   const outputTemplate = path.join(DOWNLOAD_DIR, `${id}-%(title).100s.%(ext)s`);
   const args = audioOnly
     ? [
@@ -186,6 +249,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         '--no-playlist',
         '--progress',
         '--newline',
+        '--extractor-args', 'youtube:player_client=mweb,web',
         url,
       ]
     : [
@@ -195,6 +259,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         '--no-playlist',
         '--progress',
         '--newline',
+        '--extractor-args', 'youtube:player_client=mweb,web',
         url,
       ];
 
@@ -202,21 +267,11 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
     env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' },
   });
 
-  let lastTitle = '';
-
   proc.stdout.on('data', (data: Buffer) => {
     const line = data.toString();
-    // Extract progress percentage
     const progMatch = line.match(/(\d+\.?\d*)%/);
     if (progMatch) {
-      const progress = parseFloat(progMatch[1]);
-      updateJob(id, { progress });
-    }
-    // Extract title
-    const titleMatch = line.match(/\[download\] Destination: .+\/[a-f0-9-]+-(.+)\./);
-    if (titleMatch && !lastTitle) {
-      lastTitle = titleMatch[1].replace(/-/g, ' ');
-      updateJob(id, { title: lastTitle });
+      updateJob(id, { progress: parseFloat(progMatch[1]) });
     }
   });
 
@@ -230,7 +285,6 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
 
   proc.on('close', (code) => {
     if (code === 0) {
-      // Find the output file
       const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(id));
       const file = files[0];
       if (file) {
@@ -247,15 +301,11 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         updateJob(id, { status: 'completed', progress: 100 });
       }
     } else {
-      updateJob(id, { status: 'failed', error: `Process exited with code ${code}` });
+      updateJob(id, { status: 'failed', error: `Download failed` });
     }
   });
 }
 
-/**
- * GET /api/jobs
- * List all jobs
- */
 app.get('/api/jobs', (_req: Request, res: Response) => {
   const list = Array.from(jobs.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -263,10 +313,6 @@ app.get('/api/jobs', (_req: Request, res: Response) => {
   res.json(list);
 });
 
-/**
- * GET /api/jobs/:id
- * Get single job status
- */
 app.get('/api/jobs/:id', (req: Request, res: Response) => {
   const job = jobs.get(req.params.id);
   if (!job) {
@@ -276,10 +322,6 @@ app.get('/api/jobs/:id', (req: Request, res: Response) => {
   res.json(job);
 });
 
-/**
- * GET /api/jobs/:id/file
- * Stream the downloaded file to the browser
- */
 app.get('/api/jobs/:id/file', (req: Request, res: Response) => {
   const job = jobs.get(req.params.id);
   if (!job || job.status !== 'completed' || !job.filePath) {
@@ -311,10 +353,6 @@ app.get('/api/jobs/:id/file', (req: Request, res: Response) => {
   fs.createReadStream(job.filePath).pipe(res);
 });
 
-/**
- * DELETE /api/jobs/:id
- * Delete a job and its file
- */
 app.delete('/api/jobs/:id', (req: Request, res: Response) => {
   const job = jobs.get(req.params.id);
   if (!job) {
@@ -328,10 +366,8 @@ app.delete('/api/jobs/:id', (req: Request, res: Response) => {
   res.json({ deleted: true });
 });
 
-// ─── Static File Serving (React SPA) ──────────────────────────────────────
 if (fs.existsSync(STATIC_DIR)) {
   app.use(express.static(STATIC_DIR));
-  // SPA fallback — serve index.html for all non-API routes
   app.get('*', (_req: Request, res: Response) => {
     const indexPath = path.join(STATIC_DIR, 'index.html');
     if (fs.existsSync(indexPath)) {
@@ -342,7 +378,6 @@ if (fs.existsSync(STATIC_DIR)) {
   });
 }
 
-// ─── Start ─────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`[Bagback Download Server] listening on port ${PORT}`);
   console.log(`[Bagback Download Server] download dir: ${DOWNLOAD_DIR}`);
