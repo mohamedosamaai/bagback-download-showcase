@@ -58,7 +58,7 @@ function updateJob(id: string, patch: Partial<Job>) {
 async function fetchFreeProxy(): Promise<string | null> {
   return new Promise((resolve) => {
     const req = https.get(
-      'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=2000&country=all&ssl=all&anonymity=all',
+      'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=2500&country=all&ssl=all&anonymity=all',
       (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
@@ -153,7 +153,7 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
       '--no-playlist',
       '--flat-playlist',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-      '--extractor-args', 'youtube:player_client=mweb,web',
+      '--remote-components', 'ejs:github',
       url,
     ]);
     const info = JSON.parse(raw);
@@ -192,6 +192,7 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
         '--dump-json',
         '--no-playlist',
         '--flat-playlist',
+        '--remote-components', 'ejs:github',
         url,
       ]);
       const info = JSON.parse(raw);
@@ -263,34 +264,39 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
 
   // Build base yt-dlp arguments
   const buildArgs = (proxyUrl?: string) => {
-    const base = audioOnly
-      ? [
-          '-x',
-          '--audio-format', 'mp3',
-          '--audio-quality', '0',
-          '-o', outputTemplate,
-          '--no-playlist',
-          '--progress',
-          '--newline',
-          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-          '--extractor-args', 'youtube:player_client=mweb,web',
-        ]
-      : [
-          '-f', realFormat,
-          '--merge-output-format', 'mp4',
-          '-o', outputTemplate,
-          '--no-playlist',
-          '--progress',
-          '--newline',
-          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-          '--extractor-args', 'youtube:player_client=mweb,web',
-        ];
+    const base: string[] = [];
 
     if (proxyUrl) {
       base.push('--proxy', `http://${proxyUrl}`);
     }
 
-    base.push(url);
+    if (audioOnly) {
+      base.push(
+        '-x',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '-o', outputTemplate,
+        '--no-playlist',
+        '--progress',
+        '--newline',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        '--remote-components', 'ejs:github',
+        url
+      );
+    } else {
+      base.push(
+        '-f', realFormat,
+        '--merge-output-format', 'mp4',
+        '-o', outputTemplate,
+        '--no-playlist',
+        '--progress',
+        '--newline',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        '--remote-components', 'ejs:github',
+        url
+      );
+    }
+
     return base;
   };
 
