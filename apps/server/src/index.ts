@@ -133,7 +133,7 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
       const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
       const response = await fetch(oembedUrl);
       if (response.ok) {
-        const oembed = await response.json();
+        const oembed: any = await response.json();
         res.json({
           title: oembed.title,
           thumbnail: oembed.thumbnail_url,
