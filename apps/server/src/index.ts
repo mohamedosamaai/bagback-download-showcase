@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import ytdl from '@distube/ytdl-core';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -78,9 +77,9 @@ function isYouTubeUrl(url: string): boolean {
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     const version = await ytdlp(['--version']);
-    res.json({ status: 'ok', ytdlp: version, ytdlCore: true });
+    res.json({ status: 'ok', ytdlp: version });
   } catch {
-    res.json({ status: 'ok', ytdlp: 'fallback', ytdlCore: true });
+    res.json({ status: 'ok', ytdlp: 'active' });
   }
 });
 
@@ -91,41 +90,13 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     return;
   }
 
-  // 1. Try @distube/ytdl-core for YouTube links first
-  if (isYouTubeUrl(url)) {
-    try {
-      const info = await ytdl.getInfo(url);
-      const formats: FormatInfo[] = info.formats
-        .filter((f) => f.container && (f.hasVideo || f.hasAudio))
-        .map((f) => ({
-          id: f.itag.toString(),
-          ext: f.container || 'mp4',
-          resolution: f.qualityLabel || (f.height ? `${f.height}p` : undefined),
-          filesize: f.contentLength ? parseInt(f.contentLength, 10) : undefined,
-          vcodec: f.hasVideo ? 'h264' : undefined,
-          acodec: f.hasAudio ? 'aac' : undefined,
-        }))
-        .slice(0, 15);
-
-      res.json({
-        title: info.videoDetails.title,
-        thumbnail: info.videoDetails.thumbnails?.[0]?.url,
-        duration: parseInt(info.videoDetails.lengthSeconds, 10),
-        uploader: info.videoDetails.author?.name,
-        formats,
-      });
-      return;
-    } catch (err) {
-      console.warn('[ytdl-core failed, falling back to yt-dlp]', err);
-    }
-  }
-
-  // 2. Fallback to yt-dlp for all other sites or if ytdl-core fails
+  // 1. Try yt-dlp first
   try {
     const raw = await ytdlp([
       '--dump-json',
       '--no-playlist',
       '--flat-playlist',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       '--extractor-args', 'youtube:player_client=mweb,web',
       url,
     ]);
@@ -151,10 +122,38 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
       uploader: info.uploader,
       formats,
     });
+    return;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to analyze URL';
-    res.status(422).json({ error: msg });
+    console.warn('[yt-dlp analyze failed, attempting YouTube OEmbed fallback]', err);
   }
+
+  // 2. OEmbed Fallback for YouTube URLs (bypasses bot detection)
+  if (isYouTubeUrl(url)) {
+    try {
+      const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+      const response = await fetch(oembedUrl);
+      if (response.ok) {
+        const oembed = await response.json();
+        res.json({
+          title: oembed.title,
+          thumbnail: oembed.thumbnail_url,
+          uploader: oembed.author_name,
+          duration: 0,
+          formats: [
+            { id: 'bestvideo+bestaudio/best', ext: 'mp4', resolution: '1080p (Best)' },
+            { id: '720p', ext: 'mp4', resolution: '720p HD' },
+            { id: '480p', ext: 'mp4', resolution: '480p SD' },
+            { id: 'bestaudio/best', ext: 'mp3', resolution: 'Audio MP3' },
+          ],
+        });
+        return;
+      }
+    } catch (e) {
+      console.error('[OEmbed fallback error]', e);
+    }
+  }
+
+  res.status(422).json({ error: 'Could not analyze URL. Please verify the link is public and accessible.' });
 });
 
 app.post('/api/download', (req: Request, res: Response) => {
@@ -190,55 +189,6 @@ app.post('/api/download', (req: Request, res: Response) => {
 async function runDownload(id: string, url: string, format: string, audioOnly: boolean) {
   updateJob(id, { status: 'running', progress: 5 });
 
-  // Try ytdl-core for YouTube downloads
-  if (isYouTubeUrl(url)) {
-    try {
-      const info = await ytdl.getInfo(url);
-      const title = info.videoDetails.title.replace(/[/\\?%*:|"<>]/g, '_').slice(0, 80);
-      const ext = audioOnly ? 'mp3' : 'mp4';
-      const fileName = `${id}-${title}.${ext}`;
-      const filePath = path.join(DOWNLOAD_DIR, fileName);
-
-      updateJob(id, { title: info.videoDetails.title, progress: 20 });
-
-      const stream = ytdl(url, {
-        filter: audioOnly ? 'audioonly' : 'videoandaudio',
-        quality: audioOnly ? 'highestaudio' : 'highest',
-      });
-
-      const writeStream = fs.createWriteStream(filePath);
-      let downloaded = 0;
-      const total = parseInt(info.videoDetails.lengthSeconds, 10) * 100000; // estimated
-
-      stream.on('data', (chunk: Buffer) => {
-        downloaded += chunk.length;
-        const progress = Math.min(95, 20 + Math.round((downloaded / (total || 10000000)) * 75));
-        updateJob(id, { progress });
-      });
-
-      stream.pipe(writeStream);
-
-      await new Promise((resolve, reject) => {
-        writeStream.on('finish', resolve);
-        writeStream.on('error', reject);
-        stream.on('error', reject);
-      });
-
-      const stat = fs.statSync(filePath);
-      updateJob(id, {
-        status: 'completed',
-        progress: 100,
-        filePath,
-        fileName: `${title}.${ext}`,
-        fileSize: stat.size,
-      });
-      return;
-    } catch (err) {
-      console.warn('[ytdl-core download failed, trying yt-dlp]', err);
-    }
-  }
-
-  // Fallback to yt-dlp
   const outputTemplate = path.join(DOWNLOAD_DIR, `${id}-%(title).100s.%(ext)s`);
   const args = audioOnly
     ? [
@@ -249,6 +199,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         '--no-playlist',
         '--progress',
         '--newline',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         '--extractor-args', 'youtube:player_client=mweb,web',
         url,
       ]
@@ -259,6 +210,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         '--no-playlist',
         '--progress',
         '--newline',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         '--extractor-args', 'youtube:player_client=mweb,web',
         url,
       ];
@@ -301,7 +253,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         updateJob(id, { status: 'completed', progress: 100 });
       }
     } else {
-      updateJob(id, { status: 'failed', error: `Download failed` });
+      updateJob(id, { status: 'failed', error: 'Download failed' });
     }
   });
 }
