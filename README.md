@@ -1,181 +1,105 @@
 <div align="center">
-
-# Bagback Download
-
-### Open-Source Download Manager — Built from Scratch by Bagback Digital Solutions
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Android](https://img.shields.io/badge/Android-Native_App-3DDC84?style=for-the-badge&logo=android&logoColor=white)](#)
-[![iOS](https://img.shields.io/badge/iOS-PWA_First-000000?style=for-the-badge&logo=apple&logoColor=white)](#)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-In_Development-F59E0B?style=for-the-badge)](#)
-[![Bagback](https://img.shields.io/badge/By-Bagback_Digital_Solutions-000000?style=for-the-badge)](https://bagbacktech.com)
-
-**Bagback Download is a free, open-source, clean-room download manager engineered by Bagback Digital Solutions — built entirely from scratch to give users a privacy-first, bilingual (Arabic/English), cross-platform tool for downloading and managing files from the web.**
-
-> Built with love for users, without ads, without profit motives.
-> Engineered from zero by **Mohamed Osama** — Bagback Digital Solutions.
-
+  <img src="https://raw.githubusercontent.com/mohamedosamaai/bagback-download/main/apps/web/public/apple-icon.png" alt="Bagback Download Logo" width="120" height="120" />
+  
+  # Bagback Download 🚀
+  **Free, Open-Source Universal Media & File Download Manager**
+  
+  <p>
+    <a href="https://download.bagbacktech.com"><b>Website</b></a> •
+    <a href="#features"><b>Features</b></a> •
+    <a href="#installation"><b>Installation</b></a> •
+    <a href="#browser-extension"><b>Extension</b></a>
+  </p>
 </div>
 
 ---
 
-## Product Vision
+## 🌟 About The Project
 
-The download manager space is dominated by ad-heavy apps built on copied codebases. Bagback Download is built differently: every line of code is original, the interface is bilingual from day one, and the architecture is designed for long-term maintainability across Android and iOS.
+**Bagback Download** is a modern, blazing-fast, and open-source universal downloader built to help users download videos, audio, and media from over 1,000 supported platforms (YouTube, TikTok, Instagram, X/Twitter, Facebook, etc.). 
 
-This is not a fork. Not a reskin. It is an original product built to Bagback's engineering standard.
+Built with love by [Bagback Digital Solutions](https://bagbacktech.com) & [Mohamed Osama](https://mohamedosama.me) under a strict **Clean-Room Engineering** policy. It guarantees 100% privacy with zero tracking, telemetry, or invasive ads.
 
----
+## ✨ Features
 
-## Planned Platforms
+- **🌐 Universal Support:** Download from 1000+ websites.
+- **🎬 Video & Audio:** Extract MP3 audio or download video up to the highest available quality (4K/8K).
+- **⚡ Real-time Progress:** Live download progress via Server-Sent Events (SSE).
+- **🌍 Bilingual (AR/EN):** Full support for Arabic and English with seamless RTL/LTR layout switching.
+- **🌓 Dark/Light Mode:** Beautiful, responsive UI that adapts to your system preferences.
+- **🕰️ Local History:** Keeps track of your previous downloads directly in your browser using `localStorage`.
+- **☁️ Cloud Integration:** Send downloaded files directly to **Dropbox** to save your device's bandwidth.
+- **📱 PWA Ready:** Install the web app on your phone or desktop for an app-like experience.
+- **🧩 Browser Extension:** Official Chrome/Edge extension for 1-click downloads via Context Menu.
+- **🔒 Privacy First:** No cookies, no tracking. Files are temporary and deleted from the server immediately after download.
 
-| Platform | Delivery | Status |
-|----------|---------|--------|
-| **Android** | Native App (.apk) | In Development |
-| **iOS** | Progressive Web App (PWA) | Planned |
-| **iOS Native** | Native App | Under policy review |
+## 🏗️ Architecture & Tech Stack
 
----
+This project is a Monorepo containing:
+- **Frontend (`apps/web`):** React 18, Vite, TypeScript, Vanilla CSS (No external CSS libraries for maximum performance).
+- **Backend (`apps/server`):** Node.js, Express, `yt-dlp` (Core downloading engine), FFmpeg.
+- **Extension (`apps/extension`):** Manifest V3 Chrome Extension.
 
-## Planned Features
+## 🚀 Getting Started (Local Development)
 
-### Core Download Engine
-| Feature | Description |
-|---------|-------------|
-| Paste URL | Detect and analyze any pasted link |
-| Format Detection | Identify downloadable resources (video, audio, file) |
-| Quality Selection | Choose resolution and format when available |
-| Audio Extraction | Download audio-only when supported |
-| Download Queue | Manage multiple downloads simultaneously |
-| Progress Tracking | Real-time download progress per item |
-| Retry Logic | Automatic retry on failed downloads |
-| Download History | Full history with metadata and file management |
+### Prerequisites
+- Node.js (v18+)
+- Python 3 (For `yt-dlp`)
+- FFmpeg (Must be installed and in your system PATH)
 
-### Interface
-| Feature | Description |
-|---------|-------------|
-| Bilingual | Arabic (RTL) and English (LTR) from launch |
-| Dark / Light Themes | System-aware with manual override |
-| Advanced Settings | Power-user controls for download behavior |
-| File Manager | Browse, rename, share, and delete downloaded files |
-
----
-
-## Clean-Room Policy
-
-Bagback Download is built as a **clean-room implementation**. This means:
-
-- No source code, layouts, strings, icons, or logic copied from any existing downloader (including Seal, ADM, 1DM, or similar)
-- All code written originally by the Bagback Digital Solutions engineering team
-- All UI/UX designed from scratch to Bagback's design language
-- Third-party libraries used only for standard infrastructure (HTTP, JSON, storage)
-
-See [`docs/clean-room-policy.md`](docs/clean-room-policy.md) for the full policy.
-
----
-
-## Legal Scope
-
-Bagback Download is designed exclusively to help users download files from sources where they have legal right and permission to do so. This project must not be used as a copyright-infringement tool.
-
-See [`docs/legal-scope.md`](docs/legal-scope.md) for the complete legal scope statement.
-
----
-
-## Development Roadmap
-
-```
-Phase 1 — Planning & Architecture      ← Current
-  ✓ SPEC.md — functional specification
-  ✓ Clean-room policy documentation
-  ✓ Legal scope definition
-  ✓ Platform roadmap
-
-Phase 2 — Android Foundation
-  → Core download engine
-  → URL paste and detection
-  → Queue management
-  → Progress tracking
-
-Phase 3 — UI & Bilingual Interface
-  → Arabic/English layout system
-  → Dark/light themes
-  → File manager
-
-Phase 4 — iOS PWA
-  → Progressive Web App adaptation
-  → iOS-specific UX adjustments
-
-Phase 5 — Public Release
-  → Play Store submission
-  → PWA deployment on bagbacktech.com
-  → Documentation and support
+### 1. Clone the repository
+```bash
+git clone https://github.com/mohamedosamaai/bagback-download.git
+cd bagback-download
 ```
 
----
+### 2. Setup the Backend
+```bash
+cd apps/server
+npm install
+npm run build
+npm start
+```
+*The server will run on port 4000.*
 
-## Technology Stack
+### 3. Setup the Frontend
+```bash
+cd ../web
+npm install
+npm run dev
+```
+*The frontend will run on port 5173.*
 
-| Layer | Technology |
-|-------|-----------|
-| Language | TypeScript |
-| Android | Native Android (Kotlin under evaluation) |
-| iOS | Progressive Web App |
-| UI Language | Bilingual Arabic/English (RTL + LTR) |
-| Architecture | Clean-room, original implementation |
+## 🐳 Docker Deployment (Production)
 
----
+Deploying to production is incredibly easy with the provided `docker-compose.yml`. It builds a multi-stage Docker image containing Python, FFmpeg, Node.js, and serves the static frontend alongside the Express API.
 
-## Contributing
+```bash
+docker compose up -d --build
+```
+*The app will be accessible at port 4000. Use Nginx as a reverse proxy for SSL/TLS.*
 
-This is a Bagback Digital Solutions internal project. External contributions are not accepted at this stage. The repository is public for transparency and reference.
+## 🧩 Browser Extension Installation
 
----
+1. Download the `bagback-extension.zip` or use the source code in `apps/extension`.
+2. Open Chrome/Edge and navigate to `chrome://extensions/`.
+3. Enable **Developer Mode** (top right corner).
+4. Click **Load unpacked** and select the extension folder.
+5. Right-click any video or link and choose **"Download with Bagback"**!
 
-## License
+## 🤝 Contributing
 
-Apache License 2.0 — see [LICENSE](LICENSE) for the full notice.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-The Apache 2.0 license applies to the source code in this repository. Brand assets, product name, and product design are owned by Bagback Digital Solutions.
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
----
+## 📄 License
 
-## Author
-
-| | |
-|---|---|
-| **Company** | Bagback Digital Solutions — CR 218773 |
-| **Engineer** | Mohamed Osama — AI Architect & Full-Stack Engineer, Dubai UAE |
-| **GitHub** | [@mohamedosamaai](https://github.com/mohamedosamaai) |
-| **Portfolio** | [mohamedosama.me](https://mohamedosama.me) |
-| **Company** | [bagbacktech.com](https://bagbacktech.com) |
-| **Email** | [hello@bagbacktech.com](mailto:hello@bagbacktech.com) |
-
----
-
-## Product Ecosystem
-
-> All products designed, built, and operated by Mohamed Osama / Bagback Digital Solutions
-
-| Product | Description | Live |
-|---|---|---|
-| **BagbackTech** | AI product studio, startup evaluation, and proof of work | [![](https://img.shields.io/badge/-bagbacktech.com-000000?style=flat-square)](https://bagbacktech.com) |
-| **Elitk** | AI operating system for social media, ads, CRM, outreach, and growth | [![](https://img.shields.io/badge/-elitk.com-6D4AFF?style=flat-square)](https://elitk.com) |
-| **Ops** | Field operations OS for technical-service and maintenance companies | [![](https://img.shields.io/badge/-ops.bagbacktech.com-5B20F0?style=flat-square)](https://ops.bagbacktech.com) |
-| **AI Prompts Library** | 2,771 curated AI prompts, MCP profiles, and developer skill playbooks | [![](https://img.shields.io/badge/-ai.bagbacktech.com-4285F4?style=flat-square)](https://ai.bagbacktech.com) |
-| **Bagback Commerce** | Multi-vendor commerce — retail, affiliate, payments, and fulfillment | [![](https://img.shields.io/badge/-bagback.shop-FF2D20?style=flat-square)](https://bagback.shop) |
-| **Bagback Mail** | AI-powered unified webmail — Gmail, Zoho, IMAP/SMTP in one workspace | [![](https://img.shields.io/badge/-mail.bagbacktech.com-0EA5E9?style=flat-square)](https://mail.bagbacktech.com) |
-| **Elitk Resonance** | Immersive real-time WebGL particle experience with audio reactivity | [![](https://img.shields.io/badge/-8.elitk.com-111827?style=flat-square)](https://8.elitk.com) |
-| **Portfolio** | Developer portfolio with admin dashboard and AI-ready SEO | [![](https://img.shields.io/badge/-mohamedosama.me-38bdf8?style=flat-square)](https://mohamedosama.me) |
+Distributed under the **Apache License 2.0**. See `LICENSE` for more information.
 
 ---
-
-<div align="center">
-
-[![GitHub](https://img.shields.io/badge/GitHub-mohamedosamaai-181717?style=for-the-badge&logo=github)](https://github.com/mohamedosamaai)
-[![Portfolio](https://img.shields.io/badge/Portfolio-mohamedosama.me-38bdf8?style=for-the-badge)](https://mohamedosama.me)
-[![Company](https://img.shields.io/badge/BagbackTech-bagbacktech.com-000000?style=for-the-badge)](https://bagbacktech.com)
-[![Email](https://img.shields.io/badge/Email-hello%40bagbacktech.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:hello@bagbacktech.com)
-
-</div>
+*Built with ❤️ by Bagback Digital Solutions*
