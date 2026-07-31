@@ -1,6 +1,11 @@
+/// <reference types="vite-plugin-pwa/client" />
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { registerSW } from 'virtual:pwa-register';
+
+// Register PWA Service Worker
+registerSW({ immediate: true });
 
 // ─── Translations Dictionary ───────────────────────────────────────────────
 
@@ -156,7 +161,6 @@ interface AnalyzeResult {
 }
 
 const API = '/api';
-const POLL_INTERVAL = 500;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -221,6 +225,30 @@ const GlobeIcon = () => (
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
   </svg>
 );
+
+function MoonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  );
+}
 
 // ─── Components ─────────────────────────────────────────────────────────────
 
@@ -444,6 +472,9 @@ function App() {
   const [analyzeError, setAnalyzeError] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'cleanRoom' | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('bagback-theme') as 'light' | 'dark') || 'dark';
+  });
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Translation helper function t(key)
@@ -451,28 +482,30 @@ function App() {
     return dict[lang][key] || dict.ar[key] || '';
   }, [lang]);
 
-  // Update HTML document attributes when language changes
+  // Update HTML document attributes when language and theme changes
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  }, [lang]);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('bagback-theme', theme);
+  }, [lang, theme]);
 
-  // Poll jobs from API
+  // SSE for jobs instead of polling
   useEffect(() => {
-    const poll = async () => {
+    const eventSource = new EventSource(`${API}/jobs/stream`);
+    
+    eventSource.onmessage = (e) => {
       try {
-        const res = await fetch(`${API}/jobs`);
-        if (res.ok) {
-          const data: Job[] = await res.json();
-          setJobs(data);
-        }
-      } catch {
-        // Backend starting
+        const data: Job[] = JSON.parse(e.data);
+        setJobs(data);
+      } catch (err) {
+        console.error('Failed to parse SSE data', err);
       }
     };
-    poll();
-    const timer = setInterval(poll, POLL_INTERVAL);
-    return () => clearInterval(timer);
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
   const handleAnalyze = useCallback(async () => {
@@ -549,6 +582,13 @@ function App() {
             <img src="/logo-landscape.png" alt="Bagback Download Logo" className="logo-image" style={{ height: '40px', objectFit: 'contain' }} />
           </a>
           <nav className="header-nav">
+            <button
+              className="nav-btn lang-btn"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            >
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+            </button>
             <button
               className="nav-btn lang-btn"
               onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}

@@ -843,3 +843,18 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-root); }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
 
+
+[data-theme='light'] {
+  --bg-root: #fafafa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-input: #f8fafc;
+  --bg-modal: #ffffff;
+  --border: rgba(0,0,0,0.1);
+  --border-strong: rgba(0,0,0,0.2);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-green: #15803d;
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}

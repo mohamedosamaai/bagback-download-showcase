@@ -51,10 +51,27 @@ app.use(cors({
 }));
 app.use(express.json());
 
+let sseClients: { id: number; res: Response }[] = [];
+
+function broadcastJobs() {
+  const list = Array.from(jobs.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const data = `data: ${JSON.stringify(list)}\n\n`;
+  sseClients.forEach((client) => {
+    try {
+      client.res.write(data);
+    } catch (err) {
+      console.error('[SSE] Broadcast error', err);
+    }
+  });
+}
+
 function updateJob(id: string, patch: Partial<Job>) {
   const job = jobs.get(id);
   if (!job) return;
   jobs.set(id, { ...job, ...patch, updatedAt: new Date().toISOString() });
+  broadcastJobs();
 }
 
 function checkProxy(proxyStr: string): Promise<string | null> {
@@ -419,6 +436,27 @@ app.get('/api/jobs', (_req: Request, res: Response) => {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   res.json(list);
+});
+
+app.get('/api/jobs/stream', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders(); // flush the headers to establish SSE
+
+  // Send the initial list immediately
+  const list = Array.from(jobs.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  res.write(`data: ${JSON.stringify(list)}\n\n`);
+
+  const clientId = Date.now();
+  const newClient = { id: clientId, res };
+  sseClients.push(newClient);
+
+  req.on('close', () => {
+    sseClients = sseClients.filter((client) => client.id !== clientId);
+  });
 });
 
 app.get('/api/jobs/:id', (req: Request, res: Response) => {
