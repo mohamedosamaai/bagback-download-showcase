@@ -491,7 +491,10 @@ function App() {
   const [lang, setLang] = useState<Lang>(() => {
     return (localStorage.getItem('bagback-lang') as Lang) || 'ar';
   });
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('url') || '';
+  });
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
   const [analyzeError, setAnalyzeError] = useState('');
@@ -538,9 +541,9 @@ function App() {
     };
   }, []);
 
-  const handleAnalyze = useCallback(async () => {
-    const trimmed = url.trim();
-    if (!trimmed) {
+  const handleAnalyze = useCallback(async (overrideUrl?: string) => {
+    const targetUrl = (overrideUrl || url).trim();
+    if (!targetUrl) {
       inputRef.current?.focus();
       return;
     }
@@ -551,7 +554,7 @@ function App() {
       const res = await fetch(`${API}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify({ url: targetUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to analyze URL');
@@ -562,6 +565,17 @@ function App() {
       setAnalyzing(false);
     }
   }, [url]);
+
+  // Auto-analyze on load if URL is passed in query string
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paramUrl = params.get('url');
+    if (paramUrl) {
+      // Remove it from the URL so refresh doesn't trigger it again
+      window.history.replaceState({}, document.title, window.location.pathname);
+      handleAnalyze(paramUrl);
+    }
+  }, [handleAnalyze]);
 
   const handleDownload = useCallback(async (opts: { url: string; format: string; audioOnly: boolean }) => {
     try {
@@ -684,7 +698,7 @@ function App() {
               />
               <button
                 className="btn btn-primary"
-                onClick={handleAnalyze}
+                onClick={() => handleAnalyze()}
                 disabled={analyzing || !url.trim()}
               >
                 {analyzing ? (
