@@ -546,10 +546,7 @@ function App() {
       <header className="header">
         <div className="header-inner">
           <a href="/" className="logo">
-            <div className="logo-icon">⬇</div>
-            <div className="logo-text">
-              Bagback <span>Download</span>
-            </div>
+            <img src="/logo-landscape.png" alt="Bagback Download Logo" className="logo-image" style={{ height: '40px', objectFit: 'contain' }} />
           </a>
           <nav className="header-nav">
             <button
@@ -680,7 +677,9 @@ function App() {
           {/* Empty State */}
           {jobs.length === 0 && !analyzeResult && (
             <div className="empty-state">
-              <div className="empty-icon">⬇️</div>
+              <div className="empty-icon">
+                <img src="/apple-icon.png" alt="Bagback Download Logo" style={{ width: '64px', height: '64px', objectFit: 'contain', opacity: 0.8 }} />
+              </div>
               <p>{t('emptyQueue')}</p>
             </div>
           )}
