@@ -156,7 +156,7 @@ interface AnalyzeResult {
 }
 
 const API = '/api';
-const POLL_INTERVAL = 2000;
+const POLL_INTERVAL = 500;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
