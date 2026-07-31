@@ -593,6 +593,11 @@ body {
   border-color: rgba(74, 222, 128, 0.3);
 }
 
+.icon-btn.dropbox-btn:hover {
+  color: #0061FF;
+  border-color: rgba(0, 97, 255, 0.3);
+}
+
 .icon-btn.delete-btn:hover {
   color: #f87171;
   border-color: rgba(248,113,113,0.3);
