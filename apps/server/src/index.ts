@@ -316,6 +316,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         '--no-playlist',
         '--progress',
         '--newline',
+        '--concurrent-fragments', '8',
         '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         '--remote-components', 'ejs:github',
         url
@@ -328,6 +329,7 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         '--no-playlist',
         '--progress',
         '--newline',
+        '--concurrent-fragments', '8',
         '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         '--remote-components', 'ejs:github',
         url
@@ -343,21 +345,18 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' },
       });
 
-      proc.stdout.on('data', (data: Buffer) => {
-        const line = data.toString();
-        const progMatch = line.match(/(\d+\.?\d*)%/);
-        if (progMatch) {
-          updateJob(id, { progress: parseFloat(progMatch[1]) });
+      const handleData = (data: Buffer) => {
+        const lines = data.toString().split(/\r?\n/);
+        for (const line of lines) {
+          const progMatch = line.match(/([\d\.]+)%/);
+          if (progMatch) {
+            updateJob(id, { progress: parseFloat(progMatch[1]) });
+          }
         }
-      });
+      };
 
-      proc.stderr.on('data', (data: Buffer) => {
-        const line = data.toString();
-        const progMatch = line.match(/(\d+\.?\d*)%/);
-        if (progMatch) {
-          updateJob(id, { progress: parseFloat(progMatch[1]) });
-        }
-      });
+      proc.stdout.on('data', handleData);
+      proc.stderr.on('data', handleData);
 
       proc.on('close', (code) => {
         resolve(code === 0);
