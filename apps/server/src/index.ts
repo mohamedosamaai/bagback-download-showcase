@@ -7,6 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import https from 'https';
 import http from 'http';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -139,6 +140,16 @@ function isYouTubeUrl(url: string): boolean {
   return /youtube\.com|youtu\.be/i.test(url);
 }
 
+// ─── Rate Limiter ───────────────────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per 15 minutes
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.set('trust proxy', 1);
+
 // ─── Routes ───────────────────────────────────────────────────────────────
 
 app.get('/api/health', async (_req: Request, res: Response) => {
@@ -150,7 +161,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 });
 
-app.post('/api/analyze', async (req: Request, res: Response) => {
+app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
   const { url } = req.body as { url?: string };
   if (!url || !/^https?:\/\//i.test(url)) {
     res.status(400).json({ error: 'Invalid URL. Must start with http:// or https://' });
@@ -263,7 +274,7 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
   res.status(422).json({ error: 'Could not analyze URL. Please verify the link is public and accessible.' });
 });
 
-app.post('/api/download', (req: Request, res: Response) => {
+app.post('/api/download', apiLimiter, (req: Request, res: Response) => {
   const { url, format = 'bestvideo+bestaudio/best', audioOnly = false } = req.body as {
     url?: string;
     format?: string;
@@ -474,6 +485,30 @@ if (fs.existsSync(STATIC_DIR)) {
     }
   });
 }
+
+// ─── Auto-Cleanup Job ──────────────────────────────────────────────────────────
+
+const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+const MAX_AGE = 2 * 60 * 60 * 1000; // 2 hours
+
+setInterval(() => {
+  const now = Date.now();
+  console.log('[Cleanup] Running periodic cleanup job...');
+  for (const [id, job] of jobs.entries()) {
+    const jobAge = now - new Date(job.createdAt).getTime();
+    if (jobAge > MAX_AGE) {
+      console.log(`[Cleanup] Deleting old job ${id}`);
+      if (job.filePath && fs.existsSync(job.filePath)) {
+        try {
+          fs.unlinkSync(job.filePath);
+        } catch (e) {
+          console.error(`[Cleanup] Error deleting file ${job.filePath}`, e);
+        }
+      }
+      jobs.delete(id);
+    }
+  }
+}, CLEANUP_INTERVAL);
 
 app.listen(PORT, () => {
   console.log(`[Bagback Download Server] listening on port ${PORT}`);
