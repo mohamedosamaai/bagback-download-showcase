@@ -38,6 +38,10 @@ const dict = {
     openFile: 'تحميل الملف',
     deleteItem: 'حذف',
     legalNotice: 'استخدم التطبيق فقط مع المحتوى المسموح لك بحفظه طبقاً للقوانين.',
+    localHistoryTitle: 'سجل التحميلات المحلي',
+    localHistoryEmpty: 'لا يوجد سجل سابق.',
+    loadHistoryUrl: 'استرجاع الرابط',
+    clearLocalHistory: 'مسح السجل المحلي',
     
     // Nav & Footer
     termsBtn: 'شروط الاستخدام',
@@ -94,6 +98,10 @@ const dict = {
     openFile: 'Download File',
     deleteItem: 'Delete',
     legalNotice: 'Use this app only with media you have permission to download.',
+    localHistoryTitle: 'Local Download History',
+    localHistoryEmpty: 'No previous history.',
+    loadHistoryUrl: 'Load Link',
+    clearLocalHistory: 'Clear Local History',
     
     // Nav & Footer
     termsBtn: 'Terms of Service',
@@ -160,6 +168,14 @@ interface AnalyzeResult {
   formats: Format[];
 }
 
+interface HistoryItem {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string;
+  timestamp: number;
+}
+
 const API = '/api';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -209,6 +225,13 @@ const SearchIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const HistoryIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
   </svg>
 );
 
@@ -465,12 +488,18 @@ function InfoModal({
 // ─── Main Application ──────────────────────────────────────────────────────
 
 function App() {
-  const [lang, setLang] = useState<Lang>('ar');
+  const [lang, setLang] = useState<Lang>(() => {
+    return (localStorage.getItem('bagback-lang') as Lang) || 'ar';
+  });
   const [url, setUrl] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
   const [analyzeError, setAnalyzeError] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [localHistory, setLocalHistory] = useState<HistoryItem[]>(() => {
+    const saved = localStorage.getItem('bagback-local-history');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'cleanRoom' | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('bagback-theme') as 'light' | 'dark') || 'dark';
@@ -486,6 +515,7 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    localStorage.setItem('bagback-lang', lang);
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('bagback-theme', theme);
   }, [lang, theme]);
@@ -535,6 +565,22 @@ function App() {
 
   const handleDownload = useCallback(async (opts: { url: string; format: string; audioOnly: boolean }) => {
     try {
+      if (analyzeResult) {
+        setLocalHistory(prev => {
+          const newItem: HistoryItem = {
+            id: Date.now().toString(),
+            url: opts.url,
+            title: analyzeResult.title,
+            thumbnail: analyzeResult.thumbnail,
+            timestamp: Date.now()
+          };
+          const filtered = prev.filter(h => h.url !== opts.url);
+          const updated = [newItem, ...filtered].slice(0, 20); // Keep last 20 history items
+          localStorage.setItem('bagback-local-history', JSON.stringify(updated));
+          return updated;
+        });
+      }
+
       const res = await fetch(`${API}/download`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -546,7 +592,7 @@ function App() {
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : 'Failed to start download');
     }
-  }, []);
+  }, [analyzeResult]);
 
   const handleDelete = useCallback(async (id: string) => {
     await fetch(`${API}/jobs/${id}`, { method: 'DELETE' });
@@ -711,6 +757,51 @@ function App() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Local History Section */}
+          {localHistory.length > 0 && (
+            <div className="queue-section" style={{ marginTop: '24px' }}>
+              <div className="section-header">
+                <div className="section-title">
+                  <HistoryIcon /> {t('localHistoryTitle')}
+                  <span className="badge">{localHistory.length}</span>
+                </div>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '12px', padding: '5px 12px' }}
+                  onClick={() => {
+                    setLocalHistory([]);
+                    localStorage.removeItem('bagback-local-history');
+                  }}
+                >
+                  {t('clearLocalHistory')}
+                </button>
+              </div>
+              <div className="history-grid">
+                {localHistory.map((item) => (
+                  <div key={item.id} className="history-card" onClick={() => {
+                    setUrl(item.url);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    // Optional: trigger analyze immediately
+                  }}>
+                    {item.thumbnail ? (
+                      <div className="history-thumb-wrap">
+                        <img src={item.thumbnail} alt={item.title} className="history-thumb" />
+                      </div>
+                    ) : (
+                      <div className="history-thumb-wrap empty">
+                        <HistoryIcon />
+                      </div>
+                    )}
+                    <div className="history-info">
+                      <div className="history-title" dir="ltr">{item.title}</div>
+                      <div className="history-url" dir="ltr">{truncateUrl(item.url, 30)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
