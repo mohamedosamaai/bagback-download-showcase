@@ -42,6 +42,7 @@ const dict = {
     localHistoryEmpty: 'لا يوجد سجل سابق.',
     loadHistoryUrl: 'استرجاع الرابط',
     clearLocalHistory: 'مسح السجل المحلي',
+    saveToDropbox: 'حفظ في Dropbox',
     
     // Nav & Footer
     termsBtn: 'شروط الاستخدام',
@@ -102,6 +103,7 @@ const dict = {
     localHistoryEmpty: 'No previous history.',
     loadHistoryUrl: 'Load Link',
     clearLocalHistory: 'Clear Local History',
+    saveToDropbox: 'Save to Dropbox',
     
     // Nav & Footer
     termsBtn: 'Terms of Service',
@@ -273,6 +275,51 @@ function SunIcon() {
   );
 }
 
+function CloudIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+    </svg>
+  );
+}
+
+// ─── Dropbox Saver Component ────────────────────────────────────────────────
+
+function DropboxSaver({ url, filename, title }: { url: string; filename: string; title: string }) {
+  useEffect(() => {
+    if (!document.getElementById('dropboxjs')) {
+      const script = document.createElement('script');
+      script.src = 'https://www.dropbox.com/static/api/2/dropins.js';
+      script.id = 'dropboxjs';
+      // Developer: Replace with your actual Dropbox App Key
+      script.setAttribute('data-app-key', 'YOUR_DROPBOX_APP_KEY');
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!(window as any).Dropbox) {
+      alert('Dropbox SDK not loaded or AdBlocker preventing it.');
+      return;
+    }
+    const options = {
+      files: [{ url: url, filename: filename }],
+      success: function () { console.log('Saved to Dropbox successfully!'); },
+      progress: function (progress: any) { },
+      cancel: function () { },
+      error: function (errorMessage: any) { console.error(errorMessage); }
+    };
+    (window as any).Dropbox.save(options);
+  };
+
+  return (
+    <button className="icon-btn dropbox-btn" onClick={handleSave} title={title}>
+      <CloudIcon />
+    </button>
+  );
+}
+
 // ─── Components ─────────────────────────────────────────────────────────────
 
 function JobCard({
@@ -307,13 +354,20 @@ function JobCard({
         </div>
         <div className="job-actions">
           {job.status === 'completed' && (
-            <button
-              className="icon-btn download-btn"
-              onClick={handleDownload}
-              title={t('openFile')}
-            >
-              <DownloadIcon />
-            </button>
+            <>
+              <button
+                className="icon-btn download-btn"
+                onClick={handleDownload}
+                title={t('openFile')}
+              >
+                <DownloadIcon />
+              </button>
+              <DropboxSaver
+                url={`${window.location.origin}${API}/jobs/${job.id}/file`}
+                filename={job.fileName || 'download'}
+                title={t('saveToDropbox')}
+              />
+            </>
           )}
           <button
             className="icon-btn delete-btn"
