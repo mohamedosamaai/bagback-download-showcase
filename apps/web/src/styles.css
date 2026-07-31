@@ -130,6 +130,20 @@ body {
   font-weight: 400;
 }
 
+/* Base style for logos to be smooth */
+.logo-image {
+  transition: filter 0.3s ease;
+}
+.empty-icon img {
+  transition: filter 0.3s ease;
+}
+
+/* In dark mode, if the logo has black text, we can add a subtle white glow/stroke so it remains visible */
+:root:not([data-theme='light']) .logo-image,
+:root:not([data-theme='light']) .empty-icon img {
+  filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.8)) drop-shadow(0px 0px 4px rgba(255,255,255,0.4));
+}
+
 .header-nav {
   display: flex;
   gap: 8px;
