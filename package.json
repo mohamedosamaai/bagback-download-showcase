@@ -4,9 +4,10 @@
   "private": true,
   "description": "Bagback Download monorepo",
   "scripts": {
-    "check": "echo \"Scaffold check passed\"",
     "web:dev": "cd apps/web && npm run dev",
-    "web:build": "cd apps/web && npm run build"
+    "web:build": "cd apps/web && npm run build",
+    "server:build": "cd apps/server && npm run build",
+    "server:start": "cd apps/server && npm start"
   },
   "workspaces": [
     "apps/*",

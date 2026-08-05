@@ -305,10 +305,9 @@ function DropboxSaver({ url, filename, title }: { url: string; filename: string;
     }
     const options = {
       files: [{ url: url, filename: filename }],
-      success: function () { console.log('Saved to Dropbox successfully!'); },
-      progress: function (progress: any) { },
-      cancel: function () { },
-      error: function (errorMessage: any) { console.error(errorMessage); }
+      success: function () {},
+      cancel: function () {},
+      error: function (errorMessage: string) { console.error('[Dropbox]', errorMessage); }
     };
     (window as any).Dropbox.save(options);
   };
