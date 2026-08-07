@@ -1,133 +1,226 @@
-# Bagback Download 🚀
+<p align="center">
+  <img src="https://raw.githubusercontent.com/mohamedosamaai/bagback-download-showcase/main/apps/web/public/apple-icon.png" alt="Bagback Download" width="100" />
+</p>
 
-**Free, Open-Source Universal Media & File Download Manager**
-
-Architected with pride by **Mohamed Osama**  
-*Digital Transformation Architect (DDT) & Founder @ Bagback Digital Solutions*
-
----
+<h1 align="center">Bagback Download</h1>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/mohamedosamaai/bagback-download/main/apps/web/public/apple-icon.png" alt="Bagback Download Logo" width="120" height="120" />
+  <strong>Enterprise-Grade Universal Media Download Manager</strong><br/>
+  <sub>Monorepo · React 19 PWA · Express · TypeScript Strict · Docker · CI/CD</sub>
 </p>
 
 <p align="center">
-  <a href="https://img.shields.io/badge/CI%2FCD-🟢%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white">
-    <img src="https://img.shields.io/badge/CI%2FCD-🟢%20Passing-success?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI/CD Status" />
+  <a href="https://github.com/mohamedosamaai/bagback-download-showcase/actions/workflows/ci.yml">
+    <img src="https://github.com/mohamedosamaai/bagback-download-showcase/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
   </a>
-  <a href="https://img.shields.io/badge/Security-CodeQL%20🛡️-blue?style=for-the-badge">
-    <img src="https://img.shields.io/badge/Security-CodeQL%20🛡️-blue?style=for-the-badge" alt="Security CodeQL" />
+  <a href="https://github.com/mohamedosamaai/bagback-download-showcase/actions/workflows/codeql.yml">
+    <img src="https://github.com/mohamedosamaai/bagback-download-showcase/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" />
   </a>
-  <a href="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge">
-    <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License MIT" />
-  </a>
-  <a href="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white">
-    <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 15" />
-  </a>
-  <a href="https://img.shields.io/badge/TypeScript-Strict-blue?style=for-the-badge&logo=typescript&logoColor=white">
-    <img src="https://img.shields.io/badge/TypeScript-Strict-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  </a>
-  <a href="https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react&logoColor=white">
-    <img src="https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
-  </a>
-  <a href="https://img.shields.io/badge/PostgreSQL-Latest-blue?style=for-the-badge&logo=postgresql&logoColor=white">
-    <img src="https://img.shields.io/badge/PostgreSQL-Latest-blue?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  </a>
-  <a href="https://img.shields.io/badge/Drizzle%20ORM-Active-orange?style=for-the-badge">
-    <img src="https://img.shields.io/badge/Drizzle%20ORM-Active-orange?style=for-the-badge" alt="Drizzle ORM" />
-  </a>
-  <a href="https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker&logoColor=white">
-    <img src="https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
-  </a>
-  <a href="https://img.shields.io/badge/Gemini%20API-Enabled-violet?style=for-the-badge&logo=google-gemini&logoColor=white">
-    <img src="https://img.shields.io/badge/Gemini%20API-Enabled-violet?style=for-the-badge&logo=google-gemini&logoColor=white" alt="Gemini API" />
-  </a>
+  <img src="https://img.shields.io/github/license/mohamedosamaai/bagback-download-showcase?style=flat-square&color=blue" alt="License MIT" />
+  <img src="https://img.shields.io/github/v/release/mohamedosamaai/bagback-download-showcase?style=flat-square&color=violet" alt="Release" />
+  <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Express-5-000000?style=for-the-badge&logo=express&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/PWA-Enabled-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" />
 </p>
 
 ---
 
-## 🚀 Live Interactive Demo
-
-Experience the full power of Bagback Download directly in your browser. Thanks to the type-safe client-side mock engine, you can search, analyze metadata, select resolution profiles, and track active downloads with realistic progress simulation—all without setting up a backend server.
-
-### [🚀 Launch Live Interactive Demo](https://demo-link-placeholder.com)
+> **Public Showcase Repository** — This repository demonstrates the architecture, engineering standards, and UI of the Bagback Download platform. Business-critical logic runs in a hardened private core and is replaced here with type-safe mock interfaces.
 
 ---
 
-## 🌟 Executive System Overview
+## ⚡ Live Interactive Demo
 
-**Bagback Download** is an enterprise-ready, blazing-fast universal file and media manager. It targets the common web bottleneck by providing a clean, self-hosted option for downloading files from video channels, audio streaming platforms, and major media engines. 
+> Try the full UI — URL analysis, format selection, download queue, real-time progress — **no backend required**.
 
-Designed under a strict **Clean-Room Engineering** mandate, the application ensures 100% privacy with zero tracker integrations, zero invasive cookies, and temporary filesystem caching that wipes downloaded files upon completion.
-
----
-
-## 🏗️ Architectural & Technical Highlights
-
-This project utilizes a modern monorepo layout divided into clean application layouts and reusable core packages.
-
-- **Clean Architecture & Folder Isolation**:
-  - `src/app/` - Handles the application configuration and root routing layout.
-  - `src/components/` - Segmented into reusable layouts, styling controls, and core user-facing features.
-  - `src/lib/` - Houses translation hooks and unified service clients.
-  - `src/types/` - Holds strict TypeScript type definitions for domain entities.
-  - `src/mocks/` - Core mock engines that simulate API endpoints for serverless environments.
-- **Type-Safe Mock Strategy**: Swaps automatically from production Express endpoints to local mock engines when deployed on static environments or when queried via `?mock=true`.
-- **Zero Secrets Leakage**: Hardcoded credentials and keys are strictly forbidden. System configurations use environmental schemas defined in `.env.example`.
-- **i18n Translation & RTL/LTR Compliance**: Supports seamless switching between Arabic and English without violating UI code structure guidelines (Arabic strings are parsed strictly through dynamic translation mapping).
+<p align="center">
+  <a href="https://mohamedosamaai.github.io/bagback-download-showcase?mock=true">
+    <img src="https://img.shields.io/badge/▶%20Launch%20Live%20Demo-4F46E5?style=for-the-badge&logoColor=white" alt="Live Demo" height="40" />
+  </a>
+  &nbsp;
+  <a href="https://github.com/mohamedosamaai/bagback-download-showcase/wiki">
+    <img src="https://img.shields.io/badge/📚%20Read%20the%20Wiki-0F172A?style=for-the-badge" alt="Wiki" height="40" />
+  </a>
+</p>
 
 ---
 
-## 🚀 Quickstart Guide (Local Development)
+## 🏗️ System Architecture
 
-### Prerequisites
-- Node.js (v22+)
-- Python 3 (For `yt-dlp` integration)
-- FFmpeg (Installed on system PATH)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   bagback-download (Monorepo)                    │
+│                                                                   │
+│  ┌─────────────────────────┐   ┌───────────────────────────┐    │
+│  │     apps/web (PWA)       │   │    apps/server (API)       │    │
+│  │                          │   │                            │    │
+│  │  src/                    │   │  src/                      │    │
+│  │   app/         ← Router  │   │   routes/   ← REST + SSE  │    │
+│  │   components/  ← UI      │   │   services/ ← Engine      │    │
+│  │   lib/         ← Logic   │   │   jobs/     ← Queue       │    │
+│  │   mocks/       ← Demo    │   │   middleware/← Rate limit  │    │
+│  │   types/       ← Domain  │   │                            │    │
+│  └──────────┬───────────────┘   └────────────┬──────────────┘    │
+│             │                                │                    │
+│             └──────────── HTTP / SSE ────────┘                    │
+│                                                                   │
+│  packages/              ← Shared utilities (types, constants)     │
+│  docker-compose.yml     ← Single-command production deployment   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### 1. Project Initialization
+### Request Lifecycle
+
+```
+User pastes URL
+     │
+     ▼
+[React PWA] ──── POST /api/analyze ────► [Express API]
+     │                                        │
+     │           ◄─── metadata JSON ──────────┘
+     │
+     ▼
+User selects format + clicks Download
+     │
+     ▼
+[React PWA] ──── POST /api/download ───► [Express API]
+     │                                        │
+     │                              [Job Queue - in-memory]
+     │                                        │
+     │           ◄─── SSE stream ─────────────┘
+     │              (progress 0→100%)
+     ▼
+[Download complete] → File served via /api/download/:id/file
+```
+
+---
+
+## 🎯 Engineering Highlights
+
+| Concern | Solution | Why it matters |
+|---------|----------|---------------|
+| **Real-time Updates** | Server-Sent Events (SSE) — not WebSockets | Unidirectional, HTTP/1.1 compatible, no WS overhead |
+| **Mock / Prod Parity** | `DownloadService` interface with `Real` + `Mock` implementations | Seamless toggle via env flag — zero code change required |
+| **i18n / RTL** | `useTranslation()` hook + translation dictionary | Arabic UI renders correctly without manual CSS direction hacks |
+| **Rate Limiting** | `express-rate-limit` per IP | Protects production from abuse without API gateway cost |
+| **PWA** | `vite-plugin-pwa` with Workbox `GenerateSW` | Offline capability + installable on mobile with zero native code |
+| **Container** | Multi-stage Dockerfile — Node 22 Alpine | < 180MB production image, Python + FFmpeg included |
+| **Type Safety** | TypeScript `strict: true` across all workspaces | Catches 90%+ of runtime errors at compile time |
+
+---
+
+## 🔒 Security & Sanitization Model
+
+This public showcase enforces a **Zero-Leak Architecture**:
+
+- All business-critical logic, AI prompts, and proprietary algorithms reside in a **private core repository**
+- Functions sanitized in this showcase are replaced with `// [Sanitized for Public Showcase]` typed stubs that return deterministic mock data
+- No `.env` files, API keys, or tokens exist anywhere in this repository
+- All environment variables are declared in [`.env.example`](.env.example)
+
+---
+
+## 🚀 Quickstart
+
 ```bash
-# Clone the repository
-git clone https://github.com/mohamedosamaai/bagback-download.git
-cd bagback-download
+# 1. Clone
+git clone https://github.com/mohamedosamaai/bagback-download-showcase.git
+cd bagback-download-showcase
 
-# Install monorepo dependencies
+# 2. Install
 npm install
-```
 
-### 2. Environment Configuration
-```bash
-# Setup environment parameters
+# 3. Configure
 cp .env.example .env
-```
+# → Edit .env with your values
 
-### 3. Launch Development Environments
-```bash
-# Start frontend web client (dev mode)
-npm run web:dev
+# 4. Run (development)
+npm run web:dev       # Frontend at http://localhost:5173
+npm run server:dev    # Backend  at http://localhost:4000
 
-# Build and execute the backend server
-cd apps/server
-npm run build
-npm start
-```
-- The frontend will be served at `http://localhost:5173`.
-- The backend server operates at `http://localhost:4000`.
-
----
-
-## 🐳 Docker Deployment (Production)
-
-To containerize the service, execute the unified multi-stage build:
-```bash
+# 5. Run (production)
 docker compose up -d --build
 ```
-This spawns a container prepackaged with Python, node running the express API, and static frontend files served directly via Express.
+
+### Mock Mode (no backend needed)
+```bash
+# Open browser at:
+http://localhost:5173?mock=true
+```
+
+---
+
+## 📁 Repository Structure
+
+```
+bagback-download-showcase/
+├── apps/
+│   ├── web/                    # React 19 PWA (Vite + TypeScript)
+│   │   └── src/
+│   │       ├── app/            # Root component & state
+│   │       ├── components/     # layouts/ · features/ · ui/
+│   │       ├── lib/            # api.ts · translations.ts
+│   │       ├── mocks/          # Client-side mock engine
+│   │       └── types/          # Domain entity types
+│   └── server/                 # Express 5 API (TypeScript)
+│       └── src/
+│           └── index.ts        # Routes · SSE · Job queue
+├── packages/                   # Shared workspace packages
+├── .github/
+│   ├── workflows/              # CI · CodeQL
+│   ├── ISSUE_TEMPLATE/         # Bug report · Feature request
+│   └── wiki/                   # Architecture documentation
+├── tools/
+│   └── showcase-generator.ps1  # Reusable sanitizer script
+├── docker-compose.yml
+├── Dockerfile
+└── .env.example
+```
+
+---
+
+## 📊 Project Management
+
+This project is managed using **GitHub Projects V2** with 8 specialized board views:
+
+| Board | Purpose |
+|-------|---------|
+| 🗺️ Roadmap | Quarterly milestone planning |
+| 📋 Kanban | Sprint execution (Todo → In Progress → Review → Done) |
+| 📝 Backlog | Feature prioritization and grooming |
+| 🚀 Releases | Version planning and changelog management |
+| 🐛 Bug Tracker | Severity-triaged defect management |
+| ⚡ Sprints | 2-week sprint tracking |
+| 🏛️ Architecture | System design decisions and ADRs |
+| 🔄 Retrospective | Team velocity and improvement tracking |
+
+→ [View Project Board](https://github.com/mohamedosamaai/bagback-download-showcase/projects)
+
+---
+
+## 🤝 Contributing
+
+Contributions to the showcase layer are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting a pull request.
 
 ---
 
 ## 📄 License
 
-Distributed under the **Apache License 2.0**. See [LICENSE](file:///d:/%D8%AA%D8%AD%D8%AF%D9%8A%D8%AB%20%D8%AC%D9%8A%D8%AA%20%D9%87%D8%A8/LICENSE) for more details.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-*Copyright © 2026 Mohamed Osama & Bagback Digital Solutions*
+---
+
+<p align="center">
+  Designed & architected by <strong>Mohamed Osama</strong><br/>
+  <sub>Digital Transformation Architect · Founder @ Bagback Digital Solutions</sub><br/><br/>
+  <a href="https://github.com/mohamedosamaai">GitHub</a> ·
+  <a href="https://github.com/mohamedosamaai/bagback-download-showcase/wiki">Documentation</a> ·
+  <a href="https://github.com/mohamedosamaai/bagback-download-showcase/issues">Report Bug</a>
+</p>

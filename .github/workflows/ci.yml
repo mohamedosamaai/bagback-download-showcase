@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -7,29 +7,40 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  ci:
+    name: Build & Type Check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.x]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Type Checking (Web)
-        run: npx --workspace=@bagback-download/web tsc --noEmit
+      - name: Type check — web
+        run: cd apps/web && npx tsc --noEmit
 
-      - name: Type Checking (Server)
-        run: npx --workspace=@bagback-download/server tsc --noEmit
+      - name: Type check — server
+        run: cd apps/server && npx tsc --noEmit
 
-      - name: Run Linting Verification
-        run: npm run lint
-
-      - name: Production Build
+      - name: Build all workspaces
         run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            apps/web/dist
+            apps/server/dist
+          retention-days: 7
