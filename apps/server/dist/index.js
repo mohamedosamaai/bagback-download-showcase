@@ -5,13 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const child_process_1 = require("child_process");
 const uuid_1 = require("uuid");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const os_1 = __importDefault(require("os"));
-const https_1 = __importDefault(require("https"));
-const http_1 = __importDefault(require("http"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 4000;
@@ -46,55 +43,13 @@ function updateJob(id, patch) {
     jobs.set(id, { ...job, ...patch, updatedAt: new Date().toISOString() });
     broadcastJobs();
 }
+// [Sanitized for Public Showcase - Original Logic Internal]
 function checkProxy(proxyStr) {
-    return new Promise((resolve) => {
-        const parts = proxyStr.split(':');
-        if (parts.length !== 2)
-            return resolve(null);
-        const host = parts[0];
-        const port = parseInt(parts[1], 10);
-        const req = http_1.default.request({
-            host,
-            port,
-            method: 'CONNECT',
-            path: 'www.google.com:443',
-            timeout: 1200,
-        });
-        req.on('connect', (_res, socket) => {
-            socket.destroy();
-            resolve(proxyStr);
-        });
-        req.on('error', () => resolve(null));
-        req.on('timeout', () => {
-            req.destroy();
-            resolve(null);
-        });
-        req.end();
-    });
+    return Promise.resolve(proxyStr);
 }
+// [Sanitized for Public Showcase - Original Logic Internal]
 async function fetchVerifiedProxies() {
-    return new Promise((resolve) => {
-        const req = https_1.default.get('https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=1500&country=all&ssl=all&anonymity=all', (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', async () => {
-                const list = data
-                    .split(/[\r\n]+/)
-                    .map((s) => s.trim())
-                    .filter((line) => line.includes(':'))
-                    .slice(0, 40);
-                const checks = list.map(checkProxy);
-                const results = await Promise.all(checks);
-                const working = results.filter((p) => Boolean(p));
-                resolve(working);
-            });
-        });
-        req.on('error', () => resolve([]));
-        req.setTimeout(3000, () => {
-            req.destroy();
-            resolve([]);
-        });
-    });
+    return ['127.0.0.1:8080', '192.168.1.1:8080'];
 }
 function normalizeFormat(format) {
     if (format === '720p')
@@ -107,19 +62,59 @@ function normalizeFormat(format) {
         return 'bestaudio/best';
     return 'bestvideo+bestaudio/best';
 }
+// [Sanitized for Public Showcase - Original Logic Internal]
 function ytdlp(args) {
-    return new Promise((resolve, reject) => {
-        const proc = (0, child_process_1.spawn)('yt-dlp', args, { env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' } });
-        let stdout = '';
-        let stderr = '';
-        proc.stdout.on('data', (d) => { stdout += d.toString(); });
-        proc.stderr.on('data', (d) => { stderr += d.toString(); });
-        proc.on('close', (code) => {
-            if (code === 0)
-                resolve(stdout.trim());
-            else
-                reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
-        });
+    return new Promise((resolve) => {
+        if (args.includes('--version')) {
+            resolve('2026.08.07');
+            return;
+        }
+        if (args.includes('--dump-json')) {
+            const url = args[args.length - 1];
+            let title = "Extracted web media file from link";
+            let thumbnail = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=640&auto=format&fit=crop";
+            let uploader = "Web Media";
+            let duration = 180;
+            if (/youtube\.com|youtu\.be/i.test(url)) {
+                title = "Advanced Agentic Coding with Gemini 3.5 Pro";
+                thumbnail = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=640&auto=format&fit=crop";
+                uploader = "Google DeepMind";
+                duration = 352;
+            }
+            else if (/tiktok\.com/i.test(url)) {
+                title = "AI Digital Transformation Architecture Trends for 2027";
+                thumbnail = "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=640&auto=format&fit=crop";
+                uploader = "mohamed.osama";
+                duration = 60;
+            }
+            else if (/instagram\.com/i.test(url)) {
+                title = "Bagback Download Launch - Open Source Universal Downloader";
+                thumbnail = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=640&auto=format&fit=crop";
+                uploader = "bagback.tech";
+                duration = 120;
+            }
+            else if (/twitter\.com|x\.com/i.test(url)) {
+                title = "Exciting updates on agentic frameworks and LLM orchestration!";
+                thumbnail = "https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?w=640&auto=format&fit=crop";
+                uploader = "Mohamed Osama";
+                duration = 45;
+            }
+            const rawInfo = {
+                title,
+                thumbnail,
+                duration,
+                uploader,
+                formats: [
+                    { format_id: 'bestvideo+bestaudio/best', ext: 'mp4', resolution: '1080p (Best)', filesize: 15400000, vcodec: 'h264', acodec: 'aac' },
+                    { format_id: '720p', ext: 'mp4', resolution: '720p HD', filesize: 8500000, vcodec: 'h264', acodec: 'aac' },
+                    { format_id: '480p', ext: 'mp4', resolution: '480p SD', filesize: 4200000, vcodec: 'h264', acodec: 'aac' },
+                    { format_id: 'bestaudio/best', ext: 'mp3', resolution: 'Audio MP3', filesize: 2100000, vcodec: 'none', acodec: 'mp3' }
+                ]
+            };
+            resolve(JSON.stringify(rawInfo));
+            return;
+        }
+        resolve('');
     });
 }
 function isYouTubeUrl(url) {
@@ -272,81 +267,56 @@ app.post('/api/download', apiLimiter, (req, res) => {
     runDownload(id, url, format, audioOnly).catch(console.error);
     res.json({ id });
 });
+// [Sanitized for Public Showcase - Original Logic Internal]
 async function runDownload(id, url, format, audioOnly) {
     updateJob(id, { status: 'running', progress: 5 });
-    const realFormat = normalizeFormat(format);
-    const outputTemplate = path_1.default.join(DOWNLOAD_DIR, `${id}-%(title).100s.%(ext)s`);
-    // Build base yt-dlp arguments
-    const buildArgs = (proxyUrl) => {
-        const base = [];
-        if (proxyUrl) {
-            base.push('--proxy', `http://${proxyUrl}`);
-        }
-        if (audioOnly) {
-            base.push('-x', '--audio-format', 'mp3', '--audio-quality', '0', '-o', outputTemplate, '--no-playlist', '--progress', '--newline', '--concurrent-fragments', '8', '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', '--remote-components', 'ejs:github', url);
-        }
-        else {
-            base.push('-f', realFormat, '--merge-output-format', 'mp4', '-o', outputTemplate, '--no-playlist', '--progress', '--newline', '--concurrent-fragments', '8', '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', '--remote-components', 'ejs:github', url);
-        }
-        return base;
-    };
-    const executeYtDlp = (args) => {
+    const ext = audioOnly ? 'mp3' : 'mp4';
+    let title = "mock-media-file";
+    if (/youtube\.com|youtu\.be/i.test(url)) {
+        title = "Advanced Agentic Coding with Gemini 3.5 Pro";
+    }
+    else if (/tiktok\.com/i.test(url)) {
+        title = "AI Digital Transformation Architecture Trends for 2027";
+    }
+    else if (/instagram\.com/i.test(url)) {
+        title = "Bagback Download Launch - Open Source Universal Downloader";
+    }
+    else if (/twitter\.com|x\.com/i.test(url)) {
+        title = "Exciting updates on agentic frameworks and LLM orchestration!";
+    }
+    const fileName = `${id}-${title}.${ext}`;
+    const filePath = path_1.default.join(DOWNLOAD_DIR, fileName);
+    const simulateProgress = () => {
         return new Promise((resolve) => {
-            const proc = (0, child_process_1.spawn)('yt-dlp', args, {
-                env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' },
-            });
-            const handleData = (data) => {
-                const lines = data.toString().split(/\r?\n/);
-                for (const line of lines) {
-                    const progMatch = line.match(/([\d\.]+)%/);
-                    if (progMatch) {
-                        updateJob(id, { progress: parseFloat(progMatch[1]) });
-                    }
+            let progress = 5;
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 15) + 10;
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    updateJob(id, { progress: 100 });
+                    resolve();
                 }
-            };
-            proc.stdout.on('data', handleData);
-            proc.stderr.on('data', handleData);
-            proc.on('close', (code) => {
-                resolve(code === 0);
-            });
+                else {
+                    updateJob(id, { progress });
+                }
+            }, 600);
         });
     };
-    // Step 1: Try direct download first
-    let success = await executeYtDlp(buildArgs());
-    // Step 2: If direct download failed on YouTube, query verified working proxy pool
-    if (!success && isYouTubeUrl(url)) {
-        console.warn('[Direct download failed, fetching verified proxy pool for YouTube download retry]');
-        const verifiedProxies = await fetchVerifiedProxies();
-        console.log(`[Found ${verifiedProxies.length} verified CONNECT proxies]`);
-        for (const proxy of verifiedProxies) {
-            console.log(`[Retrying download with verified proxy ${proxy}]`);
-            success = await executeYtDlp(buildArgs(proxy));
-            if (success) {
-                console.log(`[Download succeeded using verified proxy ${proxy}]`);
-                break;
-            }
-        }
+    await simulateProgress();
+    try {
+        fs_1.default.writeFileSync(filePath, `Sanitized Mock Media Content\nJob: ${id}\nTitle: ${title}\nURL: ${url}`);
+        const stat = fs_1.default.statSync(filePath);
+        updateJob(id, {
+            status: 'completed',
+            progress: 100,
+            filePath,
+            fileName: fileName.replace(`${id}-`, ''),
+            fileSize: stat.size,
+        });
     }
-    if (success) {
-        const files = fs_1.default.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(id));
-        const file = files[0];
-        if (file) {
-            const filePath = path_1.default.join(DOWNLOAD_DIR, file);
-            const stat = fs_1.default.statSync(filePath);
-            updateJob(id, {
-                status: 'completed',
-                progress: 100,
-                filePath,
-                fileName: file.replace(`${id}-`, ''),
-                fileSize: stat.size,
-            });
-        }
-        else {
-            updateJob(id, { status: 'completed', progress: 100 });
-        }
-    }
-    else {
-        updateJob(id, { status: 'failed', error: 'Download failed' });
+    catch (err) {
+        console.error('[Mock Download Error]', err);
+        updateJob(id, { status: 'failed', error: 'Mock download write failed' });
     }
 }
 app.get('/api/jobs', (_req, res) => {
