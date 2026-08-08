@@ -9,6 +9,8 @@ import https from 'https';
 import http from 'http';
 import rateLimit from 'express-rate-limit';
 
+const YOUTUBE_DL_PATH = require('youtube-dl-exec/src/constants').YOUTUBE_DL_PATH;
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(os.tmpdir(), 'bagback-downloads');
@@ -92,58 +94,18 @@ function normalizeFormat(format: string): string {
   return 'bestvideo+bestaudio/best';
 }
 
-// [Sanitized for Public Showcase - Original Logic Internal]
 function ytdlp(args: string[]): Promise<string> {
-  return new Promise((resolve) => {
-    if (args.includes('--version')) {
-      resolve('2026.08.07');
-      return;
-    }
-    if (args.includes('--dump-json')) {
-      const url = args[args.length - 1];
-      let title = "Extracted web media file from link";
-      let thumbnail = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=640&auto=format&fit=crop";
-      let uploader = "Web Media";
-      let duration = 180;
-
-      if (/youtube\.com|youtu\.be/i.test(url)) {
-        title = "Advanced Agentic Coding with Gemini 3.5 Pro";
-        thumbnail = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=640&auto=format&fit=crop";
-        uploader = "Google DeepMind";
-        duration = 352;
-      } else if (/tiktok\.com/i.test(url)) {
-        title = "AI Digital Transformation Architecture Trends for 2027";
-        thumbnail = "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=640&auto=format&fit=crop";
-        uploader = "mohamed.osama";
-        duration = 60;
-      } else if (/instagram\.com/i.test(url)) {
-        title = "Bagback Download Launch - Open Source Universal Downloader";
-        thumbnail = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=640&auto=format&fit=crop";
-        uploader = "bagback.tech";
-        duration = 120;
-      } else if (/twitter\.com|x\.com/i.test(url)) {
-        title = "Exciting updates on agentic frameworks and LLM orchestration!";
-        thumbnail = "https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?w=640&auto=format&fit=crop";
-        uploader = "Mohamed Osama";
-        duration = 45;
-      }
-
-      const rawInfo = {
-        title,
-        thumbnail,
-        duration,
-        uploader,
-        formats: [
-          { format_id: 'bestvideo+bestaudio/best', ext: 'mp4', resolution: '1080p (Best)', filesize: 15400000, vcodec: 'h264', acodec: 'aac' },
-          { format_id: '720p', ext: 'mp4', resolution: '720p HD', filesize: 8500000, vcodec: 'h264', acodec: 'aac' },
-          { format_id: '480p', ext: 'mp4', resolution: '480p SD', filesize: 4200000, vcodec: 'h264', acodec: 'aac' },
-          { format_id: 'bestaudio/best', ext: 'mp3', resolution: 'Audio MP3', filesize: 2100000, vcodec: 'none', acodec: 'mp3' }
-        ]
-      };
-      resolve(JSON.stringify(rawInfo));
-      return;
-    }
-    resolve('');
+  return new Promise((resolve, reject) => {
+    const proc = spawn(YOUTUBE_DL_PATH, args);
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', chunk => stdout += chunk.toString());
+    proc.stderr.on('data', chunk => stderr += chunk.toString());
+    proc.on('close', code => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(`yt-dlp exited with code ${code}: ${stderr}`));
+    });
+    proc.on('error', err => reject(err));
   });
 }
 
@@ -315,57 +277,69 @@ app.post('/api/download', apiLimiter, (req: Request, res: Response) => {
   res.json({ id });
 });
 
-// [Sanitized for Public Showcase - Original Logic Internal]
 async function runDownload(id: string, url: string, format: string, audioOnly: boolean) {
-  updateJob(id, { status: 'running', progress: 5 });
+  updateJob(id, { status: 'running', progress: 0 });
 
   const ext = audioOnly ? 'mp3' : 'mp4';
-  let title = "mock-media-file";
-  if (/youtube\.com|youtu\.be/i.test(url)) {
-    title = "Advanced Agentic Coding with Gemini 3.5 Pro";
-  } else if (/tiktok\.com/i.test(url)) {
-    title = "AI Digital Transformation Architecture Trends for 2027";
-  } else if (/instagram\.com/i.test(url)) {
-    title = "Bagback Download Launch - Open Source Universal Downloader";
-  } else if (/twitter\.com|x\.com/i.test(url)) {
-    title = "Exciting updates on agentic frameworks and LLM orchestration!";
+  const fileName = `${id}.%(ext)s`;
+  const filePathTemplate = path.join(DOWNLOAD_DIR, fileName);
+
+  const args = [
+    '--no-playlist',
+    '--newline',
+    '-f', format,
+  ];
+
+  if (audioOnly) {
+    args.push('-x', '--audio-format', 'mp3');
+  } else {
+    args.push('--merge-output-format', 'mp4');
   }
 
-  const fileName = `${id}-${title}.${ext}`;
-  const filePath = path.join(DOWNLOAD_DIR, fileName);
-
-  const simulateProgress = () => {
-    return new Promise<void>((resolve) => {
-      let progress = 5;
-      const interval = setInterval(() => {
-        progress += Math.floor(Math.random() * 15) + 10;
-        if (progress >= 100) {
-          clearInterval(interval);
-          updateJob(id, { progress: 100 });
-          resolve();
-        } else {
-          updateJob(id, { progress });
-        }
-      }, 600);
-    });
-  };
-
-  await simulateProgress();
+  args.push('-o', filePathTemplate);
+  args.push(url);
 
   try {
-    fs.writeFileSync(filePath, `Sanitized Mock Media Content\nJob: ${id}\nTitle: ${title}\nURL: ${url}`);
-    const stat = fs.statSync(filePath);
-    
-    updateJob(id, {
-      status: 'completed',
-      progress: 100,
-      filePath,
-      fileName: fileName.replace(`${id}-`, ''),
-      fileSize: stat.size,
+    const proc = spawn(YOUTUBE_DL_PATH, args);
+    let lastProgress = 0;
+
+    proc.stdout.on('data', (chunk) => {
+      const output = chunk.toString();
+      const match = output.match(/\[download\]\s+([\d\.]+)%/);
+      if (match && match[1]) {
+        const p = parseFloat(match[1]);
+        if (!isNaN(p) && p > lastProgress) {
+          lastProgress = p;
+          updateJob(id, { progress: p });
+        }
+      }
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        const files = fs.readdirSync(DOWNLOAD_DIR);
+        const downloadedFile = files.find(f => f.startsWith(id));
+        
+        if (downloadedFile) {
+          const actualPath = path.join(DOWNLOAD_DIR, downloadedFile);
+          const stat = fs.statSync(actualPath);
+          updateJob(id, {
+            status: 'completed',
+            progress: 100,
+            filePath: actualPath,
+            fileName: downloadedFile,
+            fileSize: stat.size,
+          });
+        } else {
+          updateJob(id, { status: 'failed', error: 'File not found after download' });
+        }
+      } else {
+        updateJob(id, { status: 'failed', error: `Process exited with code ${code}` });
+      }
     });
   } catch (err) {
-    console.error('[Mock Download Error]', err);
-    updateJob(id, { status: 'failed', error: 'Mock download write failed' });
+    console.error('[Download Error]', err);
+    updateJob(id, { status: 'failed', error: 'Failed to start download process' });
   }
 }
 

@@ -40,7 +40,12 @@ export function JobCard({ job, onDelete, t }: JobCardProps) {
       a.click();
       URL.revokeObjectURL(blobUrl);
     } else {
-      window.open(`/api/jobs/${job.id}/file`, '_blank');
+      const a = document.createElement('a');
+      a.href = `/api/jobs/${job.id}/file`;
+      a.download = job.fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
