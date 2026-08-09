@@ -94,18 +94,28 @@ function normalizeFormat(format: string): string {
   return 'bestvideo+bestaudio/best';
 }
 
-function ytdlp(args: string[]): Promise<string> {
+function ytdlp(args: string[], timeoutMs = 30000): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn(YOUTUBE_DL_PATH, args);
     let stdout = '';
     let stderr = '';
+
+    const timer = setTimeout(() => {
+      proc.kill('SIGKILL');
+      reject(new Error(`yt-dlp process timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
     proc.stdout.on('data', chunk => stdout += chunk.toString());
     proc.stderr.on('data', chunk => stderr += chunk.toString());
     proc.on('close', code => {
+      clearTimeout(timer);
       if (code === 0) resolve(stdout);
       else reject(new Error(`yt-dlp exited with code ${code}: ${stderr}`));
     });
-    proc.on('error', err => reject(err));
+    proc.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
@@ -170,6 +180,7 @@ app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
   // 2. Try yt-dlp directly
   try {
     const raw = await ytdlp([
+      '--socket-timeout', '10',
       '--dump-json',
       '--no-playlist',
       '--flat-playlist',
@@ -209,6 +220,7 @@ app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
   for (const proxy of verifiedProxies) {
     try {
       const raw = await ytdlp([
+        '--socket-timeout', '10',
         '--proxy', `http://${proxy}`,
         '--dump-json',
         '--no-playlist',
@@ -261,18 +273,22 @@ app.post('/api/download', apiLimiter, (req: Request, res: Response) => {
 
   const id = uuidv4();
   const now = new Date().toISOString();
+  
+  // Apply normalization here
+  const normalizedFormat = normalizeFormat(format);
+
   const job: Job = {
     id,
     url,
     status: 'queued',
     progress: 0,
-    format,
+    format: normalizedFormat,
     createdAt: now,
     updatedAt: now,
   };
   jobs.set(id, job);
 
-  runDownload(id, url, format, audioOnly).catch(console.error);
+  runDownload(id, url, normalizedFormat, audioOnly).catch(console.error);
 
   res.json({ id });
 });
@@ -301,15 +317,21 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
 
   try {
     const proc = spawn(YOUTUBE_DL_PATH, args);
-    let lastProgress = 0;
 
     proc.stdout.on('data', (chunk) => {
       const output = chunk.toString();
+      
+      if (output.includes('[Merger]') || output.includes('[ExtractAudio]')) {
+        updateJob(id, { progress: 99 });
+        return;
+      }
+      
       const match = output.match(/\[download\]\s+([\d\.]+)%/);
       if (match && match[1]) {
         const p = parseFloat(match[1]);
-        if (!isNaN(p) && p > lastProgress) {
-          lastProgress = p;
+        if (!isNaN(p)) {
+          // yt-dlp downloads video then audio. The % goes 0->100, then 0->100 again.
+          // By updating on every percentage (even if it drops), we show accurate sub-process progress.
           updateJob(id, { progress: p });
         }
       }
@@ -318,7 +340,8 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
     proc.on('close', (code) => {
       if (code === 0) {
         const files = fs.readdirSync(DOWNLOAD_DIR);
-        const downloadedFile = files.find(f => f.startsWith(id));
+        // Find the completed file (ignore .part or .ytdl files)
+        const downloadedFile = files.find(f => f.startsWith(id) && !f.endsWith('.part') && !f.endsWith('.ytdl'));
         
         if (downloadedFile) {
           const actualPath = path.join(DOWNLOAD_DIR, downloadedFile);
@@ -404,9 +427,10 @@ app.get('/api/jobs/:id/file', (req: Request, res: Response) => {
 
   res.setHeader('Content-Type', contentType);
   res.setHeader('Content-Length', stat.size);
+  // Standard way to encode UTF-8 filenames in Content-Disposition to force download
   res.setHeader(
     'Content-Disposition',
-    `attachment; filename="${encodeURIComponent(job.fileName || 'download')}"`,
+    `attachment; filename="download.${ext}"; filename*=UTF-8''${encodeURIComponent(job.fileName || 'download')}`
   );
   fs.createReadStream(job.filePath).pipe(res);
 });
