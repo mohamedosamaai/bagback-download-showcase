@@ -9,8 +9,6 @@ import https from 'https';
 import http from 'http';
 import rateLimit from 'express-rate-limit';
 
-const YOUTUBE_DL_PATH = require('youtube-dl-exec/src/constants').YOUTUBE_DL_PATH;
-
 const app = express();
 const PORT = process.env.PORT || 4000;
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(os.tmpdir(), 'bagback-downloads');
@@ -76,45 +74,82 @@ function updateJob(id: string, patch: Partial<Job>) {
   broadcastJobs();
 }
 
-// [Sanitized for Public Showcase - Original Logic Internal]
 function checkProxy(proxyStr: string): Promise<string | null> {
-  return Promise.resolve(proxyStr);
+  return new Promise((resolve) => {
+    const parts = proxyStr.split(':');
+    if (parts.length !== 2) return resolve(null);
+    const host = parts[0];
+    const port = parseInt(parts[1], 10);
+
+    const req = http.request({
+      host,
+      port,
+      method: 'CONNECT',
+      path: 'www.google.com:443',
+      timeout: 1200,
+    });
+
+    req.on('connect', (_res, socket) => {
+      socket.destroy();
+      resolve(proxyStr);
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
 }
 
-// [Sanitized for Public Showcase - Original Logic Internal]
 async function fetchVerifiedProxies(): Promise<string[]> {
-  return ['127.0.0.1:8080', '192.168.1.1:8080'];
+  return new Promise((resolve) => {
+    const req = https.get(
+      'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=1500&country=all&ssl=all&anonymity=all',
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', async () => {
+          const list = data
+            .split(/[\r\n]+/)
+            .map((s) => s.trim())
+            .filter((line) => line.includes(':'))
+            .slice(0, 40);
+
+          const checks = list.map(checkProxy);
+          const results = await Promise.all(checks);
+          const working = results.filter((p): p is string => Boolean(p));
+          resolve(working);
+        });
+      }
+    );
+    req.on('error', () => resolve([]));
+    req.setTimeout(3000, () => {
+      req.destroy();
+      resolve([]);
+    });
+  });
 }
 
 function normalizeFormat(format: string): string {
-  if (format === '720p') return 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
-  if (format === '480p') return 'bestvideo[height<=480]+bestaudio/best[height<=480]/best';
-  if (format === '360p') return 'bestvideo[height<=360]+bestaudio/best[height<=360]/best';
+  if (format === '720p') return 'bestvideo[height<=720]+bestaudio/best[height<=720]/b/best';
+  if (format === '480p') return 'bestvideo[height<=480]+bestaudio/best[height<=480]/b/best';
+  if (format === '360p') return 'bestvideo[height<=360]+bestaudio/best[height<=360]/b/best';
   if (format === 'bestaudio/best' || format === 'mp3') return 'bestaudio/best';
-  return 'bestvideo+bestaudio/best';
+  if (format && format !== 'bestvideo+bestaudio/best') return format;
+  return 'b/bv*+ba/best';
 }
 
-function ytdlp(args: string[], timeoutMs = 30000): Promise<string> {
+function ytdlp(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(YOUTUBE_DL_PATH, args);
+    const proc = spawn('yt-dlp', args, { env: { ...process.env, PATH: (process.env.PATH || '') + ':/usr/local/bin:/usr/bin' } });
     let stdout = '';
     let stderr = '';
-
-    const timer = setTimeout(() => {
-      proc.kill('SIGKILL');
-      reject(new Error(`yt-dlp process timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    proc.stdout.on('data', chunk => stdout += chunk.toString());
-    proc.stderr.on('data', chunk => stderr += chunk.toString());
-    proc.on('close', code => {
-      clearTimeout(timer);
-      if (code === 0) resolve(stdout);
-      else reject(new Error(`yt-dlp exited with code ${code}: ${stderr}`));
-    });
-    proc.on('error', err => {
-      clearTimeout(timer);
-      reject(err);
+    proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+    proc.on('close', (code) => {
+      if (code === 0) resolve(stdout.trim());
+      else reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
     });
   });
 }
@@ -126,7 +161,7 @@ function isYouTubeUrl(url: string): boolean {
 // ─── Rate Limiter ───────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per 15 minutes
+  max: 120, // Limit each IP to 120 requests per 15 minutes
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -145,10 +180,15 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 });
 
 app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
-  const { url } = req.body as { url?: string };
-  if (!url || !/^https?:\/\//i.test(url)) {
-    res.status(400).json({ error: 'Invalid URL. Must start with http:// or https://' });
+  let { url } = req.body as { url?: string };
+  if (!url || typeof url !== 'string') {
+    res.status(400).json({ error: 'Invalid URL' });
     return;
+  }
+
+  url = url.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url;
   }
 
   // 1. YouTube OEmbed First (instant metadata)
@@ -180,12 +220,10 @@ app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
   // 2. Try yt-dlp directly
   try {
     const raw = await ytdlp([
-      '--socket-timeout', '10',
+      '--extractor-args', 'youtube:player_client=android,web',
       '--dump-json',
       '--no-playlist',
       '--flat-playlist',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-      '--remote-components', 'ejs:github',
       url,
     ]);
     const info = JSON.parse(raw);
@@ -220,12 +258,11 @@ app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
   for (const proxy of verifiedProxies) {
     try {
       const raw = await ytdlp([
-        '--socket-timeout', '10',
+        '--extractor-args', 'youtube:player_client=android,web',
         '--proxy', `http://${proxy}`,
         '--dump-json',
         '--no-playlist',
         '--flat-playlist',
-        '--remote-components', 'ejs:github',
         url,
       ]);
       const info = JSON.parse(raw);
@@ -260,109 +297,148 @@ app.post('/api/analyze', apiLimiter, async (req: Request, res: Response) => {
 });
 
 app.post('/api/download', apiLimiter, (req: Request, res: Response) => {
-  const { url, format = 'bestvideo+bestaudio/best', audioOnly = false } = req.body as {
+  let { url, format = 'bestvideo+bestaudio/best', audioOnly = false } = req.body as {
     url?: string;
     format?: string;
     audioOnly?: boolean;
   };
 
-  if (!url || !/^https?:\/\//i.test(url)) {
+  if (!url || typeof url !== 'string') {
     res.status(400).json({ error: 'Invalid URL' });
     return;
   }
 
+  url = url.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url;
+  }
+
   const id = uuidv4();
   const now = new Date().toISOString();
-  
-  // Apply normalization here
-  const normalizedFormat = normalizeFormat(format);
-
   const job: Job = {
     id,
     url,
     status: 'queued',
     progress: 0,
-    format: normalizedFormat,
+    format,
     createdAt: now,
     updatedAt: now,
   };
   jobs.set(id, job);
 
-  runDownload(id, url, normalizedFormat, audioOnly).catch(console.error);
+  runDownload(id, url, format, audioOnly).catch(console.error);
 
   res.json({ id });
 });
 
 async function runDownload(id: string, url: string, format: string, audioOnly: boolean) {
-  updateJob(id, { status: 'running', progress: 0 });
+  updateJob(id, { status: 'running', progress: 5 });
 
-  const ext = audioOnly ? 'mp3' : 'mp4';
-  const fileName = `${id}.%(ext)s`;
-  const filePathTemplate = path.join(DOWNLOAD_DIR, fileName);
+  const realFormat = normalizeFormat(format);
+  const outputTemplate = path.join(DOWNLOAD_DIR, `${id}-%(title).100s.%(ext)s`);
 
-  const args = [
-    '--no-playlist',
-    '--newline',
-    '-f', format,
-  ];
+  // Build base yt-dlp arguments
+  const buildArgs = (proxyUrl?: string) => {
+    const base: string[] = [
+      '--extractor-args', 'youtube:player_client=android,web',
+      '--retries', '10',
+      '--fragment-retries', '10',
+      '--file-access-retries', '5',
+      '--no-playlist',
+      '--progress',
+      '--newline',
+    ];
 
-  if (audioOnly) {
-    args.push('-x', '--audio-format', 'mp3');
-  } else {
-    args.push('--merge-output-format', 'mp4');
+    if (proxyUrl) {
+      base.push('--proxy', `http://${proxyUrl}`);
+    }
+
+    if (audioOnly) {
+      base.push(
+        '-x',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '-o', outputTemplate,
+        url
+      );
+    } else {
+      base.push(
+        '-f', realFormat,
+        '--merge-output-format', 'mp4',
+        '-o', outputTemplate,
+        url
+      );
+    }
+
+    return base;
+  };
+
+  const executeYtDlp = (args: string[]): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const proc = spawn('yt-dlp', args, {
+        env: { ...process.env, PATH: (process.env.PATH || '') + ':/usr/local/bin:/usr/bin' },
+      });
+
+      const handleData = (data: Buffer) => {
+        const text = data.toString();
+        const lines = text.split(/[\r\n]+/);
+        for (const line of lines) {
+          const progMatch = line.match(/(?:\[download\])?\s*([\d\.]+)%/i);
+          if (progMatch) {
+            const p = parseFloat(progMatch[1]);
+            if (!isNaN(p) && p >= 0 && p <= 100) {
+              updateJob(id, { progress: Math.min(99, Math.max(5, p)) });
+            }
+          } else if (/\[(Merger|ExtractAudio|Fixup|VideoConvertor)\]/i.test(line)) {
+            updateJob(id, { progress: 95 });
+          }
+        }
+      };
+
+      proc.stdout.on('data', handleData);
+      proc.stderr.on('data', handleData);
+
+      proc.on('close', (code) => {
+        resolve(code === 0);
+      });
+    });
+  };
+
+  // Step 1: Try direct download first
+  let success = await executeYtDlp(buildArgs());
+
+  // Step 2: If direct download failed on YouTube, query fast verified working proxies
+  if (!success && isYouTubeUrl(url)) {
+    console.warn('[Direct download failed, attempting fast proxy fallback]');
+    try {
+      const verifiedProxies = (await fetchVerifiedProxies()).slice(0, 3);
+      for (const proxy of verifiedProxies) {
+        success = await executeYtDlp(buildArgs(proxy));
+        if (success) break;
+      }
+    } catch (e) {
+      console.warn('[Proxy fallback error]', e);
+    }
   }
 
-  args.push('-o', filePathTemplate);
-  args.push(url);
-
-  try {
-    const proc = spawn(YOUTUBE_DL_PATH, args);
-
-    proc.stdout.on('data', (chunk) => {
-      const output = chunk.toString();
-      
-      if (output.includes('[Merger]') || output.includes('[ExtractAudio]')) {
-        updateJob(id, { progress: 99 });
-        return;
-      }
-      
-      const match = output.match(/\[download\]\s+([\d\.]+)%/);
-      if (match && match[1]) {
-        const p = parseFloat(match[1]);
-        if (!isNaN(p)) {
-          // yt-dlp downloads video then audio. The % goes 0->100, then 0->100 again.
-          // By updating on every percentage (even if it drops), we show accurate sub-process progress.
-          updateJob(id, { progress: p });
-        }
-      }
-    });
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        const files = fs.readdirSync(DOWNLOAD_DIR);
-        // Find the completed file (ignore .part or .ytdl files)
-        const downloadedFile = files.find(f => f.startsWith(id) && !f.endsWith('.part') && !f.endsWith('.ytdl'));
-        
-        if (downloadedFile) {
-          const actualPath = path.join(DOWNLOAD_DIR, downloadedFile);
-          const stat = fs.statSync(actualPath);
-          updateJob(id, {
-            status: 'completed',
-            progress: 100,
-            filePath: actualPath,
-            fileName: downloadedFile,
-            fileSize: stat.size,
-          });
-        } else {
-          updateJob(id, { status: 'failed', error: 'File not found after download' });
-        }
-      } else {
-        updateJob(id, { status: 'failed', error: `Process exited with code ${code}` });
-      }
-    });
-  } catch (err) {
-    console.error('[Download Error]', err);
-    updateJob(id, { status: 'failed', error: 'Failed to start download process' });
+  if (success) {
+    const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(id));
+    const file = files[0];
+    if (file) {
+      const filePath = path.join(DOWNLOAD_DIR, file);
+      const stat = fs.statSync(filePath);
+      updateJob(id, {
+        status: 'completed',
+        progress: 100,
+        filePath,
+        fileName: file.replace(`${id}-`, ''),
+        fileSize: stat.size,
+      });
+    } else {
+      updateJob(id, { status: 'completed', progress: 100 });
+    }
+  } else {
+    updateJob(id, { status: 'failed', error: 'Download could not be completed' });
   }
 }
 
@@ -375,9 +451,10 @@ app.get('/api/jobs', (_req: Request, res: Response) => {
 
 app.get('/api/jobs/stream', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders(); // flush the headers to establish SSE
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
 
   // Send the initial list immediately
   const list = Array.from(jobs.values()).sort(
@@ -389,7 +466,16 @@ app.get('/api/jobs/stream', (req: Request, res: Response) => {
   const newClient = { id: clientId, res };
   sseClients.push(newClient);
 
+  const heartbeatTimer = setInterval(() => {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch {
+      clearInterval(heartbeatTimer);
+    }
+  }, 15000);
+
   req.on('close', () => {
+    clearInterval(heartbeatTimer);
     sseClients = sseClients.filter((client) => client.id !== clientId);
   });
 });
@@ -427,10 +513,9 @@ app.get('/api/jobs/:id/file', (req: Request, res: Response) => {
 
   res.setHeader('Content-Type', contentType);
   res.setHeader('Content-Length', stat.size);
-  // Standard way to encode UTF-8 filenames in Content-Disposition to force download
   res.setHeader(
     'Content-Disposition',
-    `attachment; filename="download.${ext}"; filename*=UTF-8''${encodeURIComponent(job.fileName || 'download')}`
+    `attachment; filename="${encodeURIComponent(job.fileName || 'download')}"`,
   );
   fs.createReadStream(job.filePath).pipe(res);
 });
