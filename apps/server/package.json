@@ -14,7 +14,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^8.6.1",
     "uuid": "^9.0.1",
-    "youtube-dl-exec": "^3.1.12"
+    "youtube-dl-exec": "^3.1.13"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
