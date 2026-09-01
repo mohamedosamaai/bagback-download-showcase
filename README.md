@@ -1,35 +1,36 @@
 <div align="center">
   <!-- Typing animation matching the cyber-violet design theme -->
-  <a href="https://github.com/mohamedosamaai"><img src="https://readme-typing-svg.demolab.com/?font=Outfit&size=24&pause=1000&color=C084FC&center=true&vCenter=true&width=600&lines=Welcome+to+Bagback+Download+Showcase!+🚀;Universal+Media+%26+File+Download+Manager;Architected+by+Mohamed+Osama" alt="Typing SVG" /></a>
+  <a href="https://github.com/mohamedosamaai"><img src="https://readme-typing-svg.demolab.com/?font=Outfit&amp;size=24&amp;pause=1000&amp;color=C084FC&amp;center=true&amp;vCenter=true&amp;width=600&amp;lines=Welcome+to+Bagback+Download+Showcase!;Universal+Media+and+File+Download+Manager;Architected+by+Mohamed+Osama" alt="Typing SVG" /></a>
 
   <br>
 
   <!-- Subtitle / Focus areas -->
   <p align="center">
-    <b>Enterprise-Grade • Open-Source • Universal Media & File Download Manager</b>
+    <b>Enterprise-Grade • Open-Source • Universal Media &amp; File Download Manager</b>
   </p>
 
   <!-- Badge Hub -->
   <p align="center">
     <a href="https://github.com/mohamedosamaai/bagback-download-showcase/actions">
-      <img src="https://img.shields.io/badge/CI%2FCD-PASSING-success?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI/CD Status" />
+      <img src="https://img.shields.io/badge/CI%2FCD-PASSING-success?style=for-the-badge&amp;logo=githubactions&amp;logoColor=white" alt="CI/CD Status" />
     </a>
     <a href="https://github.com/mohamedosamaai/bagback-download-showcase/security">
-      <img src="https://img.shields.io/badge/SECURITY-HARDENED-blue?style=for-the-badge&logo=github&logoColor=white" alt="Security Hardened" />
+      <img src="https://img.shields.io/badge/SECURITY-HARDENED-blue?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Security Hardened" />
     </a>
     <a href="https://github.com/mohamedosamaai/bagback-download-showcase/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/LICENSE-MIT-yellow?style=for-the-badge" alt="License MIT" />
     </a>
     <a href="https://github.com/sponsors/mohamedosamaai">
-      <img src="https://img.shields.io/badge/SPONSOR-SUPPORT_PROJECT-ff69b4?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor" />
+      <img src="https://img.shields.io/badge/SPONSOR-SUPPORT_PROJECT-ff69b4?style=for-the-badge&amp;logo=githubsponsors&amp;logoColor=white" alt="Sponsor" />
     </a>
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 15" />
-    <img src="https://img.shields.io/badge/TypeScript-Strict-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
-    <img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+    <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&amp;logo=react&amp;logoColor=white" alt="React 19" />
+    <img src="https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&amp;logo=vite&amp;logoColor=white" alt="Vite 6" />
+    <img src="https://img.shields.io/badge/TypeScript-Strict-3178c6?style=for-the-badge&amp;logo=typescript&amp;logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&amp;logo=express&amp;logoColor=white" alt="Express" />
+    <img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker" />
   </p>
 
   <hr width="50%">
@@ -55,14 +56,17 @@ Designed strictly for **Security and Privacy**, this showcase repository demonst
 This project utilizes a modern monorepo layout dividing operations into clean application targets:
 
 - **Clean Architecture & Folder Isolation**:
-  - `apps/web/` - Next.js frontend application, offering a beautiful, responsive, and RTL-compliant UI with real-time download status integration.
-  - `apps/server/` - Robust Express.js backend that orchestrates the execution of raw `yt-dlp` binaries, streams logs to connected clients, and securely cleans up post-download.
-- **Real-Time Job Tracking (SSE)**: The backend exposes Server-Sent Events endpoints for seamless, zero-polling real-time updates directly to the Next.js UI.
+  - `apps/web/` - React 19 + Vite frontend application, offering a responsive, accessible, and RTL-compliant UI with real-time download status integration.
+  - `apps/server/` - Robust Express.js backend that orchestrates the execution of `yt-dlp` binaries, streams progress via SSE to connected clients, and securely cleans up post-download.
+  - `packages/core/` - Reusable domain models, type definitions, and protocol standards.
+  - `packages/downloader-engine/` - Shared downloader engine utilities and execution abstractions.
+- **Real-Time Job Tracking (SSE)**: The backend exposes Server-Sent Events endpoints for seamless, zero-polling real-time updates directly to the client UI.
 - **Robust Security Practices**: 
-  - Dynamic CORS enforcement.
-  - Rate Limiting and strict URL input validation to prevent arbitrary execution or Server-Side Request Forgery (SSRF).
-  - No sensitive environment data bundled into the client build.
-- **i18n Translation & RTL/LTR Compliance**: Supports seamless switching between Arabic and English without violating UI code structure guidelines (Arabic strings are handled cleanly via translation).
+  - Dynamic CORS whitelist enforcement.
+  - Strict Rate Limiting on API and file operations.
+  - Strict URL hostname parsing and validation to prevent SSRF and injection vectors.
+  - Restricted temporary directory file permissions (`0o700`) and comprehensive path traversal protection.
+- **i18n Translation & RTL/LTR Compliance**: Supports seamless switching between Arabic and English with full bidirectional typography support.
 
 ---
 
@@ -102,12 +106,21 @@ npm run dev
 
 ---
 
+## 📦 Packages
+
+The core domain interfaces and engine wrappers are distributed as modular packages:
+
+- **`@bagback-download/core`**: Core type definitions and data contracts.
+- **`@bagback-download/engine`**: Downloader engine execution abstractions.
+
+---
+
 ## 🔒 Security Posture
 
-As a publicly showcased project, Bagback Download places a high priority on security:
-- We routinely audit our `npm` packages.
-- Dependencies are tightly controlled to mitigate supply chain attacks.
-- Execution parameters for `yt-dlp` are strictly sanitized to prevent injection attacks.
+As a publicly showcased project, Bagback Download places top priority on security:
+- 0 vulnerabilities across all dependencies audited via `npm audit`.
+- Hardened CodeQL security scanning compliant with OWASP Top 10 standards.
+- Fully sanitized parameters for media extractors and path traversal mitigation.
 
 Please see the [SECURITY.md](SECURITY.md) file for more information on our vulnerability disclosure program and secure configuration.
 
@@ -115,15 +128,13 @@ Please see the [SECURITY.md](SECURITY.md) file for more information on our vulne
 
 ## 💎 Sponsorship & Commercial Integration
 
-**Bagback Download Showcase** is open-source and free to use. However, maintaining enterprise-grade repositories, ensuring security updates, and providing continuous support requires time and resources.
+**Bagback Download Showcase** is open-source and free to use. Maintaining enterprise-grade repositories, ensuring security updates, and providing continuous support requires dedication and resources.
 
-If this project helps your business generate revenue, reduces your infrastructure costs, or saves your team hundreds of development hours, please consider supporting the project:
+If this project helps your business or organization, please consider supporting development:
 
 - 💖 **[Sponsor via GitHub](https://github.com/sponsors/mohamedosamaai)**: Become a monthly backer to ensure ongoing development.
-- ☕ **[Buy Me a Coffee](https://www.buymeacoffee.com/mohamedosama)**: A quick way to show appreciation for a one-time value.
-- 💼 **Enterprise & Commercial Support**: Need custom integrations, white-labeling, or dedicated SLA support? Reach out directly via [LinkedIn](https://linkedin.com/in/mohamedosamaai) or [Email](mailto:mohamed@bagbacktech.com).
-
-*By sponsoring, you help keep the open-source ecosystem thriving!*
+- ☕ **[Buy Me a Coffee](https://www.buymeacoffee.com/mohamedosama)**: A quick way to show appreciation.
+- 💼 **Enterprise & Commercial Support**: Need custom integrations, white-labeling, or dedicated SLA support? Reach out directly via [LinkedIn](https://linkedin.com/in/mohamedosamaai) or [Email](mailto:im@mohamedosama.me).
 
 ---
 

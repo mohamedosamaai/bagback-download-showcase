@@ -180,14 +180,25 @@ export class MockDownloadService implements DownloadService {
   }
 }
 
-const isMock = 
-  import.meta.env.VITE_USE_MOCKS === 'true' || 
-  window.location.search.includes('mock=true') ||
-  window.location.hostname.includes('github.io') ||
-  window.location.hostname.includes('vercel.app') ||
-  window.location.hostname.includes('stackblitz') ||
-  window.location.hostname.includes('codesandbox') ||
-  false;
+function isCloudDemoHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return (
+    h === 'github.io' ||
+    h.endsWith('.github.io') ||
+    h === 'vercel.app' ||
+    h.endsWith('.vercel.app') ||
+    h === 'stackblitz.io' ||
+    h.endsWith('.stackblitz.io') ||
+    h === 'codesandbox.io' ||
+    h.endsWith('.codesandbox.io')
+  );
+}
+
+const isMock =
+  import.meta.env.VITE_USE_MOCKS === 'true' ||
+  (typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('mock') === 'true' ||
+      isCloudDemoHost(window.location.hostname)));
 
 export const api: DownloadService = isMock ? new MockDownloadService() : new RealDownloadService();
 export const API_URL = '/api';

@@ -8,7 +8,8 @@
     "web:build": "cd apps/web && npm run build",
     "server:build": "cd apps/server && npm run build",
     "server:start": "cd apps/server && npm start",
-    "build": "npm run server:build && npm run web:build",
+    "packages:build": "npx tsc --project packages/core && npx tsc --project packages/downloader-engine",
+    "build": "npm run packages:build && npm run server:build && npm run web:build",
     "lint": "echo \"No linting errors found. All systems operational!\""
   },
   "workspaces": [
