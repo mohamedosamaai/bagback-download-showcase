@@ -1,28 +1,13 @@
 {
-  "name": "bagback-download",
+  "name": "bagback-download-showcase",
   "version": "0.1.0",
   "private": true,
-  "description": "Bagback Download monorepo",
-  "scripts": {
-    "web:dev": "cd apps/web && npm run dev",
-    "web:build": "cd apps/web && npm run build",
-    "server:build": "cd apps/server && npm run build",
-    "server:start": "cd apps/server && npm start",
-    "packages:build": "npx tsc --project packages/core && npx tsc --project packages/downloader-engine",
-    "build": "npm run packages:build && npm run server:build && npm run web:build",
-    "lint": "echo \"No linting errors found. All systems operational!\""
-  },
+  "description": "Bagback Download — Public Architecture, Interface Contracts & SDK Showcase",
   "workspaces": [
-    "apps/*",
     "packages/*"
   ],
-  "overrides": {
-    "brace-expansion": "^2.0.1",
-    "nanoid": "^3.3.8",
-    "fast-uri": "^3.1.6",
-    "qs": "^6.16.0",
-    "esbuild": "^0.25.0",
-    "uuid": "^11.1.1"
+  "scripts": {
+    "build": "npx tsc --project packages/core && npx tsc --project packages/downloader-engine"
   },
   "license": "MIT"
 }
