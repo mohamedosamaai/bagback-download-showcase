@@ -35,9 +35,44 @@ Built with love by [Bagback Digital Solutions](https://bagbacktech.com) & [Moham
 
 ## 🏗️ Architecture & Tech Stack
 
+```mermaid
+graph TB
+    subgraph Client ["Client Layer"]
+        Web["Web Application (React + Vite PWA)"]
+        Ext["Browser Extension (Manifest V3)"]
+    end
+
+    subgraph API ["Server Layer (Node.js / Express)"]
+        Router["Express API Router (/api)"]
+        Queue["Job Queue Manager & SSE Broadcaster"]
+    end
+
+    subgraph Core ["Core Engine & Processing"]
+        Engine["Downloader Engine (@bagback-download/core)"]
+        YtDlp["yt-dlp Execution Wrapper"]
+        FFmpeg["FFmpeg Audio/Video Post-Processor"]
+    end
+
+    subgraph Storage ["Storage & Buffer"]
+        Disk["Temporary Disk Buffer"]
+    end
+
+    Web -->|Analyze & Download REST| Router
+    Ext -->|Context Menu Trigger| Web
+    Router --> Queue
+    Queue --> Engine
+    Engine --> YtDlp
+    Engine --> FFmpeg
+    YtDlp --> Disk
+    FFmpeg --> Disk
+    Disk -->|Stream File Output| Web
+    Queue -->|SSE Live Progress Stream| Web
+```
+
 This project is a Monorepo containing:
 - **Frontend (`apps/web`):** React 18, Vite, TypeScript, Vanilla CSS (No external CSS libraries for maximum performance).
 - **Backend (`apps/server`):** Node.js, Express, `yt-dlp` (Core downloading engine), FFmpeg.
+- **Packages (`packages/core` & `packages/downloader-engine`):** Shared type contracts, normalization, and engine utilities.
 - **Extension (`apps/extension`):** Manifest V3 Chrome Extension.
 
 ## 🚀 Getting Started (Local Development)
@@ -99,7 +134,7 @@ Contributions are what make the open-source community such an amazing place to l
 
 ## 📄 License
 
-Distributed under the **Apache License 2.0**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 *Built with ❤️ by Bagback Digital Solutions*

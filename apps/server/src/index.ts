@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
@@ -8,6 +8,7 @@ import os from 'os';
 import https from 'https';
 import http from 'http';
 import rateLimit from 'express-rate-limit';
+import type { Job, FormatInfo } from '@bagback-download/core';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -16,31 +17,6 @@ const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, '..', 'static'
 
 if (!fs.existsSync(DOWNLOAD_DIR)) {
   fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
-}
-
-interface Job {
-  id: string;
-  url: string;
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  progress: number;
-  title?: string;
-  format?: string;
-  filePath?: string;
-  fileName?: string;
-  fileSize?: number;
-  error?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface FormatInfo {
-  id: string;
-  ext: string;
-  resolution?: string;
-  fps?: number;
-  filesize?: number;
-  vcodec?: string;
-  acodec?: string;
 }
 
 const jobs = new Map<string, Job>();
@@ -142,16 +118,46 @@ function normalizeFormat(format: string): string {
   return 'b/bv*+ba/best';
 }
 
+function getYtDlpBinary(): string {
+  if (process.env.YTDLP_PATH && fs.existsSync(process.env.YTDLP_PATH)) {
+    return process.env.YTDLP_PATH;
+  }
+  const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+  const candidates = [
+    path.join(__dirname, '..', '..', '..', 'node_modules', 'youtube-dl-exec', 'bin', binaryName),
+    path.join(__dirname, '..', 'node_modules', 'youtube-dl-exec', 'bin', binaryName),
+    path.join(process.cwd(), 'node_modules', 'youtube-dl-exec', 'bin', binaryName),
+    path.join(process.cwd(), '..', '..', 'node_modules', 'youtube-dl-exec', 'bin', binaryName),
+    binaryName,
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return binaryName;
+}
+
+function hasFfmpeg(): boolean {
+  try {
+    const res = spawnSync('ffmpeg', ['-version']);
+    return res.status === 0;
+  } catch {
+    return false;
+  }
+}
+
 function ytdlp(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('yt-dlp', args, { env: { ...process.env, PATH: (process.env.PATH || '') + ':/usr/local/bin:/usr/bin' } });
+    const binary = getYtDlpBinary();
+    const proc = spawn(binary, args, { env: { ...process.env, PATH: (process.env.PATH || '') + ':/usr/local/bin:/usr/bin' } });
     let stdout = '';
     let stderr = '';
     proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
     proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
     proc.on('close', (code) => {
       if (code === 0) resolve(stdout.trim());
-      else reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
+      else reject(new Error(stderr.trim() || `${binary} exited with code ${code}`));
     });
   });
 }
@@ -336,8 +342,20 @@ app.post('/api/download', apiLimiter, (req: Request, res: Response) => {
 async function runDownload(id: string, url: string, format: string, audioOnly: boolean) {
   updateJob(id, { status: 'running', progress: 5 });
 
+  // Auto-fail if stuck at 5% for more than 2 minutes
+  const jobTimeout = setTimeout(() => {
+    const currentJob = jobs.get(id);
+    if (currentJob && currentJob.status === 'running' && currentJob.progress <= 5) {
+      updateJob(id, {
+        status: 'failed',
+        error: 'Download timed out — yt-dlp may be unavailable or URL is blocked'
+      });
+    }
+  }, 2 * 60 * 1000);
+
   const realFormat = normalizeFormat(format);
   const outputTemplate = path.join(DOWNLOAD_DIR, `${id}-%(title).100s.%(ext)s`);
+  const ffmpegAvailable = hasFfmpeg();
 
   // Build base yt-dlp arguments
   const buildArgs = (proxyUrl?: string) => {
@@ -347,6 +365,9 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
       '--fragment-retries', '10',
       '--file-access-retries', '5',
       '--no-playlist',
+      '--no-warnings',
+      '--geo-bypass',
+      '--socket-timeout', '30',
       '--progress',
       '--newline',
     ];
@@ -356,28 +377,46 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
     }
 
     if (audioOnly) {
-      base.push(
-        '-x',
-        '--audio-format', 'mp3',
-        '--audio-quality', '0',
-        '-o', outputTemplate,
-        url
-      );
+      if (ffmpegAvailable) {
+        base.push(
+          '-x',
+          '--audio-format', 'mp3',
+          '--audio-quality', '0',
+          '-o', outputTemplate,
+          url
+        );
+      } else {
+        base.push(
+          '-f', 'bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio',
+          '-o', outputTemplate,
+          url
+        );
+      }
     } else {
-      base.push(
-        '-f', realFormat,
-        '--merge-output-format', 'mp4',
-        '-o', outputTemplate,
-        url
-      );
+      if (ffmpegAvailable) {
+        base.push(
+          '-f', realFormat,
+          '--merge-output-format', 'mp4',
+          '-o', outputTemplate,
+          url
+        );
+      } else {
+        base.push(
+          '-f', 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio/best',
+          '-o', outputTemplate,
+          url
+        );
+      }
     }
 
     return base;
   };
 
-  const executeYtDlp = (args: string[]): Promise<boolean> => {
+  const executeYtDlp = (args: string[]): Promise<{ success: boolean; lastError: string }> => {
     return new Promise((resolve) => {
-      const proc = spawn('yt-dlp', args, {
+      let lastStderr = '';
+      const binary = getYtDlpBinary();
+      const proc = spawn(binary, args, {
         env: { ...process.env, PATH: (process.env.PATH || '') + ':/usr/local/bin:/usr/bin' },
       });
 
@@ -385,7 +424,9 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
         const text = data.toString();
         const lines = text.split(/[\r\n]+/);
         for (const line of lines) {
-          const progMatch = line.match(/(?:\[download\])?\s*([\d\.]+)%/i);
+          const progMatch = line.match(/(?:\[download\])?\s*([\d.]+)%/) ||
+                            line.match(/(\d+\.?\d*)%\s+of/) ||
+                            line.match(/(\d+\.?\d*)\s*%/);
           if (progMatch) {
             const p = parseFloat(progMatch[1]);
             if (!isNaN(p) && p >= 0 && p <= 100) {
@@ -398,16 +439,26 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
       };
 
       proc.stdout.on('data', handleData);
-      proc.stderr.on('data', handleData);
+      proc.stderr.on('data', (data: Buffer) => {
+        lastStderr = data.toString().slice(-500);
+        handleData(data);
+      });
+
+      proc.on('error', (err) => {
+        console.error('[yt-dlp spawn error]', err);
+        resolve({ success: false, lastError: err.message });
+      });
 
       proc.on('close', (code) => {
-        resolve(code === 0);
+        resolve({ success: code === 0, lastError: lastStderr });
       });
     });
   };
 
   // Step 1: Try direct download first
-  let success = await executeYtDlp(buildArgs());
+  let result = await executeYtDlp(buildArgs());
+  let success = result.success;
+  let lastError = result.lastError;
 
   // Step 2: If direct download failed on YouTube, query fast verified working proxies
   if (!success && isYouTubeUrl(url)) {
@@ -415,7 +466,9 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
     try {
       const verifiedProxies = (await fetchVerifiedProxies()).slice(0, 3);
       for (const proxy of verifiedProxies) {
-        success = await executeYtDlp(buildArgs(proxy));
+        result = await executeYtDlp(buildArgs(proxy));
+        success = result.success;
+        lastError = result.lastError;
         if (success) break;
       }
     } catch (e) {
@@ -423,24 +476,35 @@ async function runDownload(id: string, url: string, format: string, audioOnly: b
     }
   }
 
-  if (success) {
-    const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(id));
-    const file = files[0];
-    if (file) {
-      const filePath = path.join(DOWNLOAD_DIR, file);
-      const stat = fs.statSync(filePath);
-      updateJob(id, {
-        status: 'completed',
-        progress: 100,
-        filePath,
-        fileName: file.replace(`${id}-`, ''),
-        fileSize: stat.size,
-      });
-    } else {
-      updateJob(id, { status: 'completed', progress: 100 });
+  clearTimeout(jobTimeout);
+
+  const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(id));
+  const validFile = files.find((f) => {
+    try {
+      const p = path.join(DOWNLOAD_DIR, f);
+      return fs.existsSync(p) && fs.statSync(p).size > 0;
+    } catch {
+      return false;
     }
+  });
+
+  if (validFile) {
+    const filePath = path.join(DOWNLOAD_DIR, validFile);
+    const stat = fs.statSync(filePath);
+    updateJob(id, {
+      status: 'completed',
+      progress: 100,
+      filePath,
+      fileName: validFile.replace(`${id}-`, ''),
+      fileSize: stat.size,
+    });
+  } else if (success) {
+    updateJob(id, { status: 'completed', progress: 100 });
   } else {
-    updateJob(id, { status: 'failed', error: 'Download could not be completed' });
+    updateJob(id, {
+      status: 'failed',
+      error: lastError.trim() || 'Download could not be completed'
+    });
   }
 }
 

@@ -1,11 +1,3 @@
-import nodemailer from 'nodemailer';
-
-const SMTP_HOST = process.env.SMTP_HOST || 'mail.elitk.com';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
-const SMTP_USER = process.env.SMTP_USER || 'download@bagbacktech.com';
-const SMTP_PASS = process.env.SMTP_PASS || 'Bagback2026@Admin';
-const FROM_EMAIL = process.env.SMTP_FROM || 'download@bagbacktech.com';
-
 export interface SendDownloadReceiptEmailOpts {
   to: string;
   mediaTitle: string;
@@ -15,6 +7,19 @@ export interface SendDownloadReceiptEmailOpts {
 
 export async function sendDownloadReceiptEmail(opts: SendDownloadReceiptEmailOpts): Promise<boolean> {
   try {
+    // Dynamic import to support optional mail transport runtime
+    const nodemailer: any = await import('nodemailer' as any).catch(() => null);
+    if (!nodemailer || !nodemailer.createTransport) {
+      console.warn('[download-email] nodemailer runtime unavailable, skipping receipt');
+      return false;
+    }
+
+    const SMTP_HOST = process.env.SMTP_HOST || 'mail.elitk.com';
+    const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+    const SMTP_USER = process.env.SMTP_USER || 'download@bagbacktech.com';
+    const SMTP_PASS = process.env.SMTP_PASS || 'Bagback2026@Admin';
+    const FROM_EMAIL = process.env.SMTP_FROM || 'download@bagbacktech.com';
+
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
@@ -60,3 +65,4 @@ export async function sendDownloadReceiptEmail(opts: SendDownloadReceiptEmailOpt
     return false;
   }
 }
+
